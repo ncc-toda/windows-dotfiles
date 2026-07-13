@@ -5,9 +5,8 @@
 
     # New freeform schema: `settings` mirrors git config sections directly.
     settings = {
-      # TODO: set these to your own identity.
-      user.name = "tetsuo";
-      user.email = "ncc.system.ai@gmail.com";
+      user.name = "ncc-toda";
+      user.email = "oda.tetsuo@nsg.gr.jp";
 
       init.defaultBranch = "main";
       pull.rebase = true;
