@@ -4,6 +4,7 @@
     ./modules/shell.nix
     ./modules/cli.nix
     ./modules/git.nix
+    ./modules/windows.nix
   ];
 
   home.username = "tetsuo";

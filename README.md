@@ -16,8 +16,16 @@ modules/
   shell.nix        # bash + starship + fzf + zoxide + direnv + ble.sh + aliases
   cli.nix          # modern CLI tools (eza, bat, ripgrep, fd, jq, ...)
   git.nix          # git identity, delta, aliases
+  windows.nix      # (WSL のみ) make switch 時に Windows 側の配置/登録を実行
+windows/           # Windows ホスト側: WezTerm + Caps Lock 2度押しトグル (AHK)
 Makefile           # `make switch` / `make build` / `make update`
 ```
+
+WSL の Linux 環境は home-manager が管理する。**Windows 本体**側は WezTerm を使い、
+Caps Lock 2度押しで表示/非表示する Mac(Raycast) 相当のセットアップを用意している。
+`modules/windows.nix` により、WSL 上では `make switch` が Windows 側の設定配置と
+AHK 起動登録まで自動で行う（WezTerm/AutoHotkey 本体の導入だけは初回 winget で手動）。
+`wezterm.lua` は Mac とも共用可能 → [`windows/README.md`](windows/README.md)。
 
 ## Usage
 
