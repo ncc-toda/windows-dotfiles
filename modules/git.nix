@@ -3,25 +3,26 @@
   programs.git = {
     enable = true;
 
-    # TODO: set these to your own identity.
-    userName = "tetsuo";
-    userEmail = "ncc.system.ai@gmail.com";
+    # New freeform schema: `settings` mirrors git config sections directly.
+    settings = {
+      # TODO: set these to your own identity.
+      user.name = "tetsuo";
+      user.email = "ncc.system.ai@gmail.com";
 
-    extraConfig = {
       init.defaultBranch = "main";
       pull.rebase = true;
       push.autoSetupRemote = true;
       fetch.prune = true;
       diff.colorMoved = "default";
       merge.conflictStyle = "zdiff3";
-    };
 
-    aliases = {
-      st = "status";
-      co = "checkout";
-      br = "branch";
-      last = "log -1 HEAD";
-      lg = "log --oneline --graph --decorate --all -30";
+      alias = {
+        st = "status";
+        co = "checkout";
+        br = "branch";
+        last = "log -1 HEAD";
+        lg = "log --oneline --graph --decorate --all -30";
+      };
     };
 
     ignores = [
