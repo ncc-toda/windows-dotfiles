@@ -16,14 +16,14 @@ modules/
   shell.nix        # bash + starship + fzf + zoxide + direnv + ble.sh + aliases
   cli.nix          # modern CLI tools (eza, bat, ripgrep, fd, jq, ...)
   git.nix          # git identity, delta, aliases
-  windows.nix      # (WSL のみ) make switch 時に Windows 側の配置/登録を実行
+  windows.nix      # (WSL のみ) just switch 時に Windows 側の配置/登録を実行
 windows/           # Windows ホスト側: WezTerm + Caps Lock 2度押しトグル (AHK)
-Makefile           # `make switch` / `make build` / `make update`
+justfile           # `just switch` / `just build` / `just update`
 ```
 
 WSL の Linux 環境は home-manager が管理する。**Windows 本体**側は WezTerm を使い、
 Caps Lock 2度押しで表示/非表示する Mac(Raycast) 相当のセットアップを用意している。
-`modules/windows.nix` により、WSL 上では `make switch` が Windows 側の設定配置と
+`modules/windows.nix` により、WSL 上では `just switch` が Windows 側の設定配置と
 AHK 起動登録まで自動で行う（WezTerm/AutoHotkey 本体の導入だけは初回 winget で手動）。
 `wezterm.lua` は Mac とも共用可能 → [`windows/README.md`](windows/README.md)。
 
@@ -33,7 +33,7 @@ Apply the configuration (first run backs up existing `~/.bashrc` etc. to
 `*.backup`):
 
 ```sh
-make switch
+just switch
 # equivalent to:
 home-manager switch --flake ~/dotfiles#tetsuo -b backup
 ```
@@ -44,12 +44,15 @@ First-time bootstrap on a fresh machine (before `home-manager` is on PATH):
 nix run home-manager/master -- switch --flake ~/dotfiles#tetsuo -b backup
 ```
 
-Other flows:
+Other flows (`just` is installed by home-manager, so it's on PATH after the
+first `switch`):
 
 ```sh
-make build          # evaluate/build without activating
-make update         # bump nixpkgs + home-manager to latest, then `make switch`
-make generations    # list generations; roll back with the printed activate script
+just                # default recipe = switch
+just build          # evaluate/build without activating
+just update         # bump nixpkgs + home-manager to latest, then switch
+just generations    # list generations; roll back with the printed activate script
+just --list         # show all recipes
 ```
 
 ## What's included
@@ -61,7 +64,10 @@ make generations    # list generations; roll back with the printed activate scri
   [fzf](https://github.com/junegunn/fzf).
 - **Per-project env:** [direnv](https://direnv.net/) + nix-direnv.
 - **CLI tools:** eza, bat, ripgrep, fd, jq, yq, delta, dust, duf, btop, ...
-- **Git:** identity, aliases, delta diffs.
+- **Git:** identity, aliases, delta diffs + [lazygit](https://github.com/jesseduffield/lazygit) TUI.
+- **Files:** [yazi](https://github.com/sxyazi/yazi) file manager — `y` で起動し、
+  終了時に居たディレクトリへシェルごと移動する。
+- **cd 後に自動 ls:** `cd`/zoxide で移動すると eza で一覧表示（項目が多い時は省略）。
 
 ## Notes
 
