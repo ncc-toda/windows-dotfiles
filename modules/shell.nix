@@ -54,7 +54,15 @@
   # ---------------------------------------------------------------------------
   # Prompt & shell integrations (all auto-hook into bash)
   # ---------------------------------------------------------------------------
-  programs.starship.enable = true;
+  programs.starship = {
+    enable = true;
+    settings = {
+      # WSL's /mnt/c (Windows filesystem) is slow; the default 30ms git scan
+      # times out there. Give it more headroom.
+      scan_timeout = 100;
+      command_timeout = 1000;
+    };
+  };
 
   programs.fzf = {
     enable = true;

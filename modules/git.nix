@@ -7,15 +7,6 @@
     userName = "tetsuo";
     userEmail = "ncc.system.ai@gmail.com";
 
-    # delta: syntax-highlighted, side-by-side-capable diffs.
-    delta = {
-      enable = true;
-      options = {
-        navigate = true;
-        line-numbers = true;
-      };
-    };
-
     extraConfig = {
       init.defaultBranch = "main";
       pull.rebase = true;
@@ -40,5 +31,15 @@
       "result"
       "result-*"
     ];
+  };
+
+  # delta: syntax-highlighted, side-by-side-capable git diffs.
+  programs.delta = {
+    enable = true;
+    enableGitIntegration = true;
+    options = {
+      navigate = true;
+      line-numbers = true;
+    };
   };
 }
