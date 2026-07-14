@@ -295,7 +295,15 @@ if triple:find('windows') then
     -- WSL ディストロが見つからない場合の保険。
     config.default_prog = { 'wsl.exe', '--cd', '~' }
   end
-  config.win32_system_backdrop = 'Acrylic' -- 背景ぼかし(WT の acrylic 相当)
+  -- 背景透過は WezTerm 自前のアルファ合成 (window_background_opacity = 0.8) に
+  -- 任せる。win32_system_backdrop = 'Acrylic' は DWM の Acrylic API に処理を丸投げ
+  -- するが、Windows では「透過されず不透明のまま」になる不具合が多発しており
+  -- (wezterm #6265 / #4145)、特に gui-startup で開く主ウィンドウだけ不透明のまま
+  -- という報告もある (#7594)。よって Acrylic は使わず 'Disable' で明示的に切る。
+  -- 背後のぼかしは失うが、確実に透ける方を優先する。ぼかしも欲しい場合は下記を
+  --   config.win32_system_backdrop = 'Acrylic'
+  -- に戻し、window_background_opacity を 0 付近まで下げて試す (効かない環境あり)。
+  config.win32_system_backdrop = 'Disable'
 elseif triple:find('darwin') then
   config.macos_window_background_blur = 20
 end

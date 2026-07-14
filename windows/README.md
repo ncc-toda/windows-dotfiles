@@ -27,7 +27,9 @@ windows/
   ユーザー領域に自動導入するので、手動インストールは不要（再ログインで全アプリに反映）。
 - **プロンプト**: Starship（Tokyo Night 系。`config/starship.toml`）。WSL 側の
   home-manager が `~/.config/starship.toml` に配置する。
-- **透過**: `window_background_opacity = 0.8` + Windows は Acrylic でぼかし。
+- **透過**: `window_background_opacity = 0.8`（WezTerm 自前のアルファ透過）。
+  Windows の `win32_system_backdrop = 'Acrylic'`（DWM のぼかし）は透過が効かなく
+  なる不具合が多いため使わず `'Disable'`（背後のぼかしは無し）。
 
 ## セットアップ
 
