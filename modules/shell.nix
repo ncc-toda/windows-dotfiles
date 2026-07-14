@@ -93,24 +93,35 @@
         fi
       ''
 
-      (lib.mkAfter ''
+      # ble-attach は「全部のセットアップが終わった一番最後」に呼ぶ必要がある。
+      # ここが早すぎると、ble.sh がアタッチした時点の PS1(= bash 既定の
+      # \u@\h:\w\$)で最初のプロンプトを描いてしまい、starship のプロンプトは
+      # 次の描画(= Enter を叩いた後)まで出ない。結果「WezTerm 起動直後は素の
+      # プロンプトが出て、Enter を押すと starship に変わる」= WSL が起動して
+      # いないように見える症状になる。
+      # home-manager の各連携は initExtra を以下の順序値で注入する:
+      #   direnv = mkAfter(1500) / starship = mkOrder 1900 / zoxide = mkOrder 2000
+      # lib.mkAfter(1500) だと starship/zoxide より前に来てしまうため、それらより
+      # 大きい mkOrder 2100 で「全連携の後」に確実に ble-attach させる。
+      (lib.mkOrder 2100 ''
         [[ ''${BLE_VERSION-} ]] && ble-attach
       '')
     ];
   };
 
+  # ble.sh 設定 (~/.blerc)。ble.sh が起動時に自動読込する。配色は Kanagawa 系で
+  # kanagawabones テーマ (WezTerm 側) と揃えたシンタックスハイライト。
+  home.file.".blerc".source = ../config/blerc;
+
   # ---------------------------------------------------------------------------
   # Prompt & shell integrations (all auto-hook into bash)
   # ---------------------------------------------------------------------------
-  programs.starship = {
-    enable = true;
-    settings = {
-      # WSL's /mnt/c (Windows filesystem) is slow; the default 30ms git scan
-      # times out there. Give it more headroom.
-      scan_timeout = 100;
-      command_timeout = 1000;
-    };
-  };
+  # starship 本体の有効化 (bash への `starship init` 注入) は home-manager が行い、
+  # 設定は Tokyo Night 系の raw TOML (config/starship.toml) をそのまま配置する。
+  # settings を空にしておくと home-manager は starship.toml を生成しないので、
+  # xdg.configFile と衝突しない。
+  programs.starship.enable = true;
+  xdg.configFile."starship.toml".source = ../config/starship.toml;
 
   programs.fzf = {
     enable = true;
