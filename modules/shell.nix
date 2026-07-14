@@ -44,6 +44,15 @@
         [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
         [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
+        # WezTerm へ現在ディレクトリを OSC 7 で通知する。これにより WezTerm 側で
+        # 「分割 / 新タブ / 新規ウィンドウ」を今開いているパスで開けるようになり、
+        # resurrect のセッション復元もこのパス情報を使う。ble.sh 併用時も
+        # PROMPT_COMMAND は尊重されるので両対応。
+        __osc7_cwd() {
+          printf '\e]7;file://%s%s\e\\' "''${HOSTNAME:-localhost}" "$PWD"
+        }
+        PROMPT_COMMAND="__osc7_cwd''${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
+
         # cd 後に自動で一覧表示 (zsh の chpwd + eza フック相当)。
         # 項目が多いディレクトリでは一覧を省略して圧迫を防ぐ。
         __auto_ls() {

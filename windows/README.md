@@ -69,11 +69,22 @@ Mac の「英数/かな」キー配置を Windows で再現する。Mac 同様**
 | `h` `j` `k` `l` | 左/下/上/右のペインへ移動 |
 | `Shift+h/j/k/l` | ペインサイズ変更 |
 | `z` | 現在のペインを最大化トグル |
-| `x` | ペインを閉じる |
-| `c` | 新しいタブ |
+| `x` | ペインを閉じる（確認あり） |
+| `c` | 新しいタブ（今開いているパスで開く） |
 | `n` / `p` | 次 / 前のタブ |
+| `1`〜`9` | その番号のタブへ |
+| `Shift+S` | セッションを手動保存 |
+| `r` | セッションを復元（ファジー選択） |
 
-（`Ctrl+Shift+P` はコマンドパレット。Leader 不要。）
+Leader なしの単発キー:
+
+| キー | 動作 |
+|---|---|
+| `Ctrl+W` | ペインを削除（即時。※シェルの単語削除を奪う） |
+| `Ctrl+T` | 新しいタブ（今開いているパスで開く。※readline の transpose を奪う） |
+| `Ctrl+D` / `Ctrl+Shift+D` | 左右 / 上下に分割 |
+| `Ctrl+[` / `Ctrl+]` | 前 / 次のペインへ |
+| `Ctrl+Shift+P` | コマンドパレット（メニュー相当） |
 
 ## 前提: この PC は CapsLock → F13 リマップ済み
 
@@ -106,6 +117,23 @@ ln -sf ~/dotfiles/windows/wezterm.lua ~/.wezterm.lua
 
 - **トグルの猶予時間**: `caps-toggle.ahk` の `300`(ms)。
 - **隠し方**: 既定は最小化(`WinMinimize`)。Alt+Tab からも消したいなら `WinHide`/`WinShow` に。
-- **見た目/フォント/透過**: `wezterm.lua`（`color_scheme` / `font` / `window_background_opacity`）。
-- **起動する WSL ディストロ**: `wezterm.lua` の `default_prog`
-  （既定は既定ディストロ。指定するなら `{ 'wsl.exe', '-d', 'Ubuntu', '--cd', '~' }`）。
+- **見た目/フォント/透過**: `wezterm.lua`（`color_scheme` / `font` / `window_background_opacity`。
+  数値を下げるほど透ける）。ぼかしは Windows=`win32_system_backdrop`、Mac=`macos_window_background_blur`。
+- **起動時の最大化**: `gui-startup` イベントで開いたウィンドウを `:maximize()` している。
+  最大化をやめたい場合はその行を消す。
+- **起動する WSL ディストロ**: `wezterm.lua` は `wezterm.default_wsl_domains()` で
+  インストール済みディストロを列挙し、先頭を既定にする。特定のディストロに固定するなら
+  `config.default_domain = 'WSL:Ubuntu'` のように名前指定する（名前は上記列挙の値）。
+
+## セッション保持（前回のパス/レイアウト復元）
+
+`wezterm.lua` は [resurrect.wezterm](https://github.com/MLFlexer/resurrect.wezterm) プラグインで
+**タブ/ペイン/開いていたパスを復元**する。
+
+- **仕組み**: 60 秒ごとに状態をスナップショット保存し、起動時に直近の状態を自動復元する。
+  手動保存/復元は `Ctrl+A → Shift+S` / `Ctrl+A → r`。
+- **初回起動時のみ**、プラグイン本体を GitHub から自動取得する（ネット接続が必要。以降はキャッシュ）。
+  取得に失敗しても本体設定は死なず、復元機能だけ無効になる（`pcall` でガード）。
+- **パス追従の土台**: 分割/新タブ/復元が「今開いているパス」で開くのは、bash が
+  **OSC 7 で現在ディレクトリを WezTerm に通知**しているため（`modules/shell.nix` で設定）。
+  これが無いと WezTerm は cwd を追跡できず、常にホームで開く。
