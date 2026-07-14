@@ -46,6 +46,88 @@ config.hide_tab_bar_if_only_one_tab = false
 config.tab_bar_at_bottom = false
 config.show_new_tab_button_in_tab_bar = true
 
+-- 上部バー(メニューバー的な部分)のネオン配色 -------------------------------
+-- fancy tab bar の見た目は 2 箇所で決まる:
+--   window_frame  … バー本体の背景と 最小化/最大化/閉じる・"+" ボタンの色
+--   colors.tab_bar … 各タブ(アクティブ/非アクティブ/ホバー)の色
+-- 漆黒の紫地に、アクティブ=マゼンタ / ホバー=シアン / 新規=グリーン と
+-- 差し色をネオンで散らしてカラフル & スタイリッシュにする。
+local neon = {
+  bg      = '#0b0713', -- ほぼ黒の紫(バー地色)
+  bg_alt  = '#1a1030', -- 非アクティブタブの地
+  magenta = '#ff2fb9', -- アクティブタブ
+  cyan    = '#00f0ff', -- ホバー / ボタンホバー
+  purple  = '#a855f7', -- 新規タブホバー
+  green   = '#39ff14', -- 新規タブ "+"
+  dim     = '#8a7fb0', -- 非アクティブ文字
+}
+
+config.window_frame = {
+  font = wezterm.font { family = 'MesloLGS Nerd Font', weight = 'Bold' },
+  font_size = 12.0,
+  active_titlebar_bg   = neon.bg,
+  inactive_titlebar_bg = neon.bg,
+  active_titlebar_fg   = neon.cyan,
+  inactive_titlebar_fg = neon.dim,
+  -- 最小化/最大化/閉じるボタン(INTEGRATED_BUTTONS)
+  button_fg       = neon.magenta,
+  button_bg       = neon.bg,
+  button_hover_fg = neon.bg,
+  button_hover_bg = neon.cyan,
+}
+
+config.colors = {
+  tab_bar = {
+    background = neon.bg,
+    active_tab = {
+      bg_color = neon.magenta, fg_color = neon.bg, intensity = 'Bold',
+    },
+    inactive_tab = {
+      bg_color = neon.bg_alt, fg_color = neon.dim,
+    },
+    inactive_tab_hover = {
+      bg_color = neon.cyan, fg_color = neon.bg, italic = true,
+    },
+    new_tab = {
+      bg_color = neon.bg_alt, fg_color = neon.green,
+    },
+    new_tab_hover = {
+      bg_color = neon.purple, fg_color = neon.bg, intensity = 'Bold',
+    },
+  },
+}
+
+-- タブ名: ① GitHub リポジトリ名 → ② 開いているパス の優先度で表示する。
+-- リポジトリ名はシェル(shell.nix)が user var 'WEZTERM_REPO' で通知する。空
+-- (= リポジトリ外)なら cwd の末尾ディレクトリ名にフォールバックする。
+local function tab_basename(path)
+  path = (path or ''):gsub('[/\\]+$', '')
+  return path:match('([^/\\]+)$') or path
+end
+
+wezterm.on('format-tab-title', function(tab, tabs, panes, cfg, hover, max_width)
+  local pane = tab.active_pane
+  local repo = (pane.user_vars or {}).WEZTERM_REPO
+  local icon, label
+  if repo and repo ~= '' then
+    icon, label = wezterm.nerdfonts.dev_github, repo -- GitHub リポジトリ名
+  else
+    -- current_working_dir は新しめの WezTerm では Url オブジェクト、古い版では
+    -- 文字列。両対応で末尾ディレクトリ名を取り出す。
+    local cwd = pane.current_working_dir
+    local path
+    if type(cwd) == 'userdata' then
+      path = cwd.file_path
+    elseif type(cwd) == 'string' then
+      path = cwd:gsub('^file://[^/]*', '')
+    end
+    icon = wezterm.nerdfonts.cod_folder -- フォルダアイコン
+    label = tab_basename(path or pane.title or 'shell')
+  end
+  local title = string.format(' %d %s %s ', tab.tab_index + 1, icon, label)
+  return wezterm.truncate_right(title, max_width)
+end)
+
 -- ウィンドウ枠: 最小化/最大化/閉じるボタンをタブバーに統合して表示する
 -- (= メニューバー的な上部バー)。リサイズも従来どおり可能。
 config.window_decorations = 'INTEGRATED_BUTTONS|RESIZE'

@@ -51,7 +51,23 @@
         __osc7_cwd() {
           printf '\e]7;file://%s%s\e\\' "''${HOSTNAME:-localhost}" "$PWD"
         }
-        PROMPT_COMMAND="__osc7_cwd''${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
+
+        # WezTerm のタブ名用に「GitHub リポジトリ名」を user var で通知する。
+        # remote origin の URL からリポジトリ名を取り出し、remote が無ければトップ
+        # レベルのディレクトリ名を使う。リポジトリ外なら空文字を送る(タブ側は空なら
+        # 「開いているパス」にフォールバックする)。SetUserVar は値を base64 で渡す。
+        __wezterm_repo() {
+          local repo url top
+          url=$(git config --get remote.origin.url 2>/dev/null)
+          if [[ -n $url ]]; then
+            repo=''${url##*/}; repo=''${repo%.git}
+          elif top=$(git rev-parse --show-toplevel 2>/dev/null); then
+            repo=''${top##*/}
+          fi
+          printf '\e]1337;SetUserVar=%s=%s\e\\' WEZTERM_REPO \
+            "$(printf %s "''${repo:-}" | base64 | tr -d '\n')"
+        }
+        PROMPT_COMMAND="__osc7_cwd; __wezterm_repo''${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
 
         # cd 後に自動で一覧表示 (zsh の chpwd + eza フック相当)。
         # 項目が多いディレクトリでは一覧を省略して圧迫を防ぐ。
