@@ -39,6 +39,11 @@ function Install-Link($source, $target) {
         $item = Get-Item $target -Force
         if ($item.LinkType -eq 'SymbolicLink') {
             Remove-Item $target -Force
+        } elseif ((Get-FileHash $target).Hash -eq (Get-FileHash $source).Hash) {
+            # 既に同一内容のコピーが置かれている → 何もしない。
+            # (再実行で本物のバックアップをコピーで上書きしてしまうのを防ぐ)
+            Write-Ok "最新: $target (コピー済み)"
+            return
         } else {
             $bak = "$target.backup"
             if (Test-Path $bak) { Remove-Item $bak -Force }
@@ -46,13 +51,22 @@ function Install-Link($source, $target) {
             Write-Warn2 "既存を $bak に退避しました"
         }
     }
+    # symlink を試し、ダメならコピーにフォールバックする。
+    # 開発者モードが ON でも「リンク先が \\wsl.localhost\... の UNC パス」だと
+    # 管理者権限が要求されて失敗するため、Test-CanSymlink だけに頼らず実際に
+    # 作ってみて例外を握る(ここで throw させると $ErrorActionPreference=Stop で
+    # bootstrap 全体が中断し、後段の AHK 登録まで巻き添えで止まる)。
     if (Test-CanSymlink) {
-        New-Item -ItemType SymbolicLink -Path $target -Target $source | Out-Null
-        Write-Ok "リンク: $target -> $source"
-    } else {
-        Copy-Item $source $target -Force
-        Write-Ok "コピー: $target (開発者モード無効のためコピー配置)"
+        try {
+            New-Item -ItemType SymbolicLink -Path $target -Target $source -ErrorAction Stop | Out-Null
+            Write-Ok "リンク: $target -> $source"
+            return
+        } catch {
+            Write-Warn2 "シンボリックリンク不可(WSL の UNC パス等)。コピー配置にフォールバック。"
+        }
     }
+    Copy-Item $source $target -Force
+    Write-Ok "コピー: $target"
 }
 
 # --- 1. WezTerm 設定 --------------------------------------------------------
@@ -64,31 +78,37 @@ if (-not (Get-Command wezterm-gui.exe -ErrorAction SilentlyContinue) `
     Write-Warn2 "WezTerm が見つかりません。'winget install wez.wezterm' で導入してください。"
 }
 
-# --- 2. AutoHotkey トグル ---------------------------------------------------
-Write-Host "==> Caps Lock トグル(AutoHotkey)を登録" -ForegroundColor Cyan
+# --- 2. AutoHotkey スクリプト ----------------------------------------------
+Write-Host "==> AutoHotkey スクリプトを登録" -ForegroundColor Cyan
 $ahkExe = @(
     "$env:ProgramFiles\AutoHotkey\v2\AutoHotkey64.exe",
     "$env:ProgramFiles\AutoHotkey\v2\AutoHotkey.exe",
     "$env:ProgramFiles\AutoHotkey\AutoHotkey.exe"
 ) | Where-Object { Test-Path $_ } | Select-Object -First 1
 
-if (-not $ahkExe) {
-    Write-Warn2 "AutoHotkey v2 が見つかりません。'winget install AutoHotkey.AutoHotkey' で導入してください。"
-} else {
-    Write-Ok "AutoHotkey: $ahkExe"
-    $ahkScript = Join-Path $here 'caps-toggle.ahk'
-    $lnkPath = Join-Path ([Environment]::GetFolderPath('Startup')) 'caps-toggle.lnk'
+# 1本の .ahk を「ログイン時自動起動に登録 + 今すぐ起動」する。冪等。
+function Register-Ahk($ahkExe, $scriptName, $lnkName, $description) {
+    $ahkScript = Join-Path $here $scriptName
+    $lnkPath = Join-Path ([Environment]::GetFolderPath('Startup')) $lnkName
     $wsh = New-Object -ComObject WScript.Shell
     $lnk = $wsh.CreateShortcut($lnkPath)
     $lnk.TargetPath       = $ahkExe
     $lnk.Arguments        = '"' + $ahkScript + '"'
     $lnk.WorkingDirectory = $here
-    $lnk.Description       = 'Caps Lock 2度押しでターミナルをトグル'
+    $lnk.Description       = $description
     $lnk.Save()
     Write-Ok "自動起動を登録: $lnkPath"
     Start-Process -FilePath $ahkExe -ArgumentList ('"' + $ahkScript + '"')
-    Write-Ok "caps-toggle.ahk を起動しました"
+    Write-Ok "$scriptName を起動しました"
+}
+
+if (-not $ahkExe) {
+    Write-Warn2 "AutoHotkey v2 が見つかりません。'winget install AutoHotkey.AutoHotkey' で導入してください。"
+} else {
+    Write-Ok "AutoHotkey: $ahkExe"
+    Register-Ahk $ahkExe 'caps-toggle.ahk' 'caps-toggle.lnk' 'Caps Lock 2度押しでターミナルをトグル'
+    Register-Ahk $ahkExe 'ime-shift.ahk'   'ime-shift.lnk'   '左Shift=英数 / 右Shift=かな (Mac風IME切替)'
 }
 
 Write-Host ""
-Write-Host "完了。Caps Lock を素早く2回 → WezTerm が表示/非表示に切り替わります。" -ForegroundColor Cyan
+Write-Host "完了。Caps Lock 2回 → WezTerm 表示/非表示、左Shift=英数 / 右Shift=かな。" -ForegroundColor Cyan

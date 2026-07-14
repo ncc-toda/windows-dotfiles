@@ -17,12 +17,13 @@ modules/
   cli.nix          # modern CLI tools (eza, bat, ripgrep, fd, jq, ...)
   git.nix          # git identity, delta, aliases
   windows.nix      # (WSL のみ) just switch 時に Windows 側の配置/登録を実行
-windows/           # Windows ホスト側: WezTerm + Caps Lock 2度押しトグル (AHK)
+windows/           # Windows ホスト側: WezTerm + Caps Lock トグル / IME Shift切替 (AHK)
 justfile           # `just switch` / `just build` / `just update`
 ```
 
 WSL の Linux 環境は home-manager が管理する。**Windows 本体**側は WezTerm を使い、
-Caps Lock 2度押しで表示/非表示する Mac(Raycast) 相当のセットアップを用意している。
+Caps Lock 2度押しで表示/非表示する Mac(Raycast) 相当のセットアップと、左Shift=英数 /
+右Shift=かな の Mac 風 IME 切替(AutoHotkey)を用意している。
 `modules/windows.nix` により、WSL 上では `just switch` が Windows 側の設定配置と
 AHK 起動登録まで自動で行う（WezTerm/AutoHotkey 本体の導入だけは初回 winget で手動）。
 `wezterm.lua` は Mac とも共用可能 → [`windows/README.md`](windows/README.md)。
