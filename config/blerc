@@ -1,0 +1,50 @@
+# ble.sh 設定 (~/.blerc) — Kanagawa / kanagawabones パレットに統一
+# terminal-environment.md §4.4 準拠。
+# home-manager (modules/shell.nix) が ~/.blerc に配置し、ble.sh が自動読込する。
+# 非 truecolor 端末では ble.sh が自動で 256 色に丸める。
+
+# autosuggestion の視認性確保（透過背景対策）
+ble-face auto_complete='fg=246'
+
+# --- シンタックスハイライト（Kanagawa / kanagawabones パレットに統一） ---
+
+# コマンド名
+ble-face command_file='fg=#7fb4ca'            # springBlue: 外部コマンド（カーソル色と同じアクセント）
+ble-face command_builtin='fg=#ffa066'         # surimiOrange: ビルトイン
+ble-face command_alias='fg=#7aa89f'           # waveAqua2: エイリアス
+ble-face command_function='fg=#7e9cd8'        # crystalBlue: シェル関数
+ble-face command_keyword='fg=#957fb8'         # oniViolet: if / for などの予約語
+ble-face command_directory='fg=#7e9cd8,underline'
+ble-face syntax_function_name='fg=#7e9cd8,bold'
+
+# 文字列・変数・展開
+ble-face syntax_quoted='fg=#98bb6c'           # springGreen: 文字列
+ble-face syntax_quotation='fg=#98bb6c,bold'   # 引用符そのもの
+ble-face syntax_escape='fg=#c0a36e'           # boatYellow2: エスケープ
+ble-face syntax_varname='fg=#e6c384'          # carpYellow: 変数名（代入時）
+ble-face syntax_param_expansion='fg=#957fb8'  # oniViolet: $VAR / ${...}
+ble-face syntax_expr='fg=#d27e99'             # sakuraPink: $((...))
+
+# 構文要素
+ble-face syntax_comment='fg=#727169'          # fujiGray
+ble-face syntax_delimiter='fg=#9cabca'        # springViolet2: ; | & など
+ble-face syntax_glob='fg=#ff9e3b'             # roninYellow: * ? [...]
+ble-face syntax_brace='fg=#9cabca'
+ble-face syntax_tilde='fg=#957fb8'
+ble-face syntax_document='fg=#c8c093'         # oldWhite: ヒアドキュメント
+ble-face syntax_document_begin='fg=#c8c093,bold'
+
+# エラー表示は背景色を使わず文字色のみで示す
+ble-face syntax_error='fg=#e46876'            # waveRed: 未存在コマンド等
+ble-face argument_error='fg=#e46876'          # waveRed: 引数エラー
+ble-face filename_orphan='fg=#e46876,underline' # リンク切れ symlink
+
+# ファイル名・引数
+ble-face filename_directory='fg=#7e9cd8,underline'
+ble-face filename_executable='fg=#98bb6c,underline'
+ble-face filename_link='fg=#7fb4ca,underline'
+ble-face filename_warning='fg=#e46876,underline'
+ble-face argument_option='fg=#7aa89f'         # waveAqua2: -f --long
+
+# 選択領域
+ble-face region='bg=#2d4f67'                  # waveBlue2（Kanagawa の Visual 相当）
