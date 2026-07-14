@@ -54,34 +54,37 @@ config.hide_tab_bar_if_only_one_tab = false
 config.tab_bar_at_bottom = false
 config.show_new_tab_button_in_tab_bar = true
 
--- 上部バー(メニューバー的な部分)のネオン配色 -------------------------------
+-- 上部バー(メニューバー的な部分)の配色 (Kanagawa Wave パレットに統一) -------
 -- fancy tab bar の見た目は 2 箇所で決まる:
 --   window_frame  … バー本体の背景と 最小化/最大化/閉じる・"+" ボタンの色
 --   colors.tab_bar … 各タブ(アクティブ/非アクティブ/ホバー)の色
--- 漆黒の紫地に、アクティブ=マゼンタ / ホバー=シアン / 新規=グリーン と
--- 差し色をネオンで散らしてカラフル & スタイリッシュにする。
-local neon = {
-  bg      = '#0b0713', -- ほぼ黒の紫(バー地色)
-  bg_alt  = '#1a1030', -- 非アクティブタブの地
-  magenta = '#ff2fb9', -- アクティブタブ
-  cyan    = '#00f0ff', -- ホバー / ボタンホバー
-  purple  = '#a855f7', -- 新規タブホバー
-  green   = '#39ff14', -- 新規タブ "+"
-  dim     = '#8a7fb0', -- 非アクティブ文字
+-- テーマ本文 (kanagawabones) と ble.sh (config/blerc) と同じ Kanagawa パレットで
+-- 揃える。バー地色は本文背景 (#1f1f28 sumiInk3) と同色にして上部バーが本文と
+-- シームレスに繋がるようにし、アクティブ=oniViolet / ホバー=springBlue(カーソル
+-- と同じアクセント) / 新規=springGreen と Kanagawa の差し色を散らす。
+local kanagawa = {
+  bg      = '#1f1f28', -- sumiInk3: バー地色(本文背景と同色)
+  bg_alt  = '#2a2a37', -- sumiInk4: 非アクティブタブの地(わずかに浮かせる)
+  violet  = '#957fb8', -- oniViolet: アクティブタブ
+  blue    = '#7fb4ca', -- springBlue: ホバー / ボタンホバー(カーソルと同じ)
+  crystal = '#7e9cd8', -- crystalBlue: 新規タブホバー
+  green   = '#98bb6c', -- springGreen: 新規タブ "+"
+  fg      = '#c8c093', -- oldWhite: アクティブ文字ベース
+  dim     = '#727169', -- fujiGray: 非アクティブ文字
 }
 
 config.window_frame = {
   font = wezterm.font { family = 'FiraCode Nerd Font', weight = 'Bold' },
   font_size = 12.0,
-  active_titlebar_bg   = neon.bg,
-  inactive_titlebar_bg = neon.bg,
-  active_titlebar_fg   = neon.cyan,
-  inactive_titlebar_fg = neon.dim,
+  active_titlebar_bg   = kanagawa.bg,
+  inactive_titlebar_bg = kanagawa.bg,
+  active_titlebar_fg   = kanagawa.blue,
+  inactive_titlebar_fg = kanagawa.dim,
   -- 最小化/最大化/閉じるボタン(INTEGRATED_BUTTONS)
-  button_fg       = neon.magenta,
-  button_bg       = neon.bg,
-  button_hover_fg = neon.bg,
-  button_hover_bg = neon.cyan,
+  button_fg       = kanagawa.violet,
+  button_bg       = kanagawa.bg,
+  button_hover_fg = kanagawa.bg,
+  button_hover_bg = kanagawa.blue,
 }
 
 config.colors = {
@@ -92,21 +95,21 @@ config.colors = {
   -- 入力文字がカーソルに重なった時に読めるよう、前景は地色寄りにする。
   cursor_fg = '#1f1f28',
   tab_bar = {
-    background = neon.bg,
+    background = kanagawa.bg,
     active_tab = {
-      bg_color = neon.magenta, fg_color = neon.bg, intensity = 'Bold',
+      bg_color = kanagawa.violet, fg_color = kanagawa.bg, intensity = 'Bold',
     },
     inactive_tab = {
-      bg_color = neon.bg_alt, fg_color = neon.dim,
+      bg_color = kanagawa.bg_alt, fg_color = kanagawa.dim,
     },
     inactive_tab_hover = {
-      bg_color = neon.cyan, fg_color = neon.bg, italic = true,
+      bg_color = kanagawa.blue, fg_color = kanagawa.bg, italic = true,
     },
     new_tab = {
-      bg_color = neon.bg_alt, fg_color = neon.green,
+      bg_color = kanagawa.bg_alt, fg_color = kanagawa.green,
     },
     new_tab_hover = {
-      bg_color = neon.purple, fg_color = neon.bg, intensity = 'Bold',
+      bg_color = kanagawa.crystal, fg_color = kanagawa.bg, intensity = 'Bold',
     },
   },
 }
