@@ -22,21 +22,29 @@ if not ok_resurrect then
   resurrect = nil
 end
 
--- 見た目 -------------------------------------------------------------------
-config.color_scheme = 'OneHalfDark'
+-- 見た目 (terminal-environment.md §2/§3 準拠) -------------------------------
+-- テーマは WezTerm 組み込みの kanagawabones (Kanagawa 系)。ble.sh の配色
+-- (config/blerc) と同じパレットで、シェル本文とプロンプト周辺が揃う。
+config.color_scheme = 'kanagawabones'
+-- 本文は Fira Code Nerd Font (リガチャ + Nerd Font グリフ入りのパッチ版。1 本で
+-- Starship のアイコンまで賄える)。念のためグリフのみ Symbols Nerd Font Mono に
+-- フォールバックする。bootstrap.ps1 がこの 2 フォントを Windows 側へ導入する。
 config.font = wezterm.font_with_fallback({
+  'FiraCode Nerd Font',
+  'Symbols Nerd Font Mono',
   'MesloLGS Nerd Font',
-  'Cascadia Code',
-  'JetBrains Mono',
 })
 config.font_size = 13.0
+-- カーソル: bar 形状 + 点滅。色は kanagawabones の springBlue アクセント。
 config.default_cursor_style = 'BlinkingBar'
-config.window_padding = { left = 8, right = 8, top = 6, bottom = 6 }
+-- パディングは Ghostty 側の window-padding-x/y = 16/4 に合わせる。
+config.window_padding = { left = 16, right = 16, top = 4, bottom = 4 }
 config.window_close_confirmation = 'NeverPrompt'
 config.scrollback_lines = 10000
 
 -- 背景透過 (数値を下げるほど透ける)。ぼかしはプラットフォーム別設定で足す。
-config.window_background_opacity = 0.92
+-- Ghostty 側の background-opacity = 0.8 に合わせる。
+config.window_background_opacity = 0.8
 
 -- タブバー: 常時表示 + fancy(GUI 風)。fancy だと右クリックメニューや "+"
 -- (新規タブ)ボタンが使え、メニューバー的に操作できる。
@@ -63,7 +71,7 @@ local neon = {
 }
 
 config.window_frame = {
-  font = wezterm.font { family = 'MesloLGS Nerd Font', weight = 'Bold' },
+  font = wezterm.font { family = 'FiraCode Nerd Font', weight = 'Bold' },
   font_size = 12.0,
   active_titlebar_bg   = neon.bg,
   inactive_titlebar_bg = neon.bg,
@@ -77,6 +85,12 @@ config.window_frame = {
 }
 
 config.colors = {
+  -- カーソル: kanagawabones の springBlue アクセント (#7fb4ca)。ble.sh の
+  -- 外部コマンド色 (config/blerc の command_file) と同じ差し色で統一する。
+  cursor_bg = '#7fb4ca',
+  cursor_border = '#7fb4ca',
+  -- 入力文字がカーソルに重なった時に読めるよう、前景は地色寄りにする。
+  cursor_fg = '#1f1f28',
   tab_bar = {
     background = neon.bg,
     active_tab = {

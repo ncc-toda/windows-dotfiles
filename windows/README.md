@@ -12,8 +12,22 @@ windows/
   wezterm.lua       WezTerm 設定 (Mac/Windows 共用。Windows では既定で WSL を開く)
   caps-toggle.ahk   Caps Lock 2度押し → WezTerm を表示/非表示トグル (AutoHotkey v2)
   ime-shift.ahk     左Shift=英数 / 右Shift=かな (Mac風のIME切替。AutoHotkey v2)
-  bootstrap.ps1     wezterm.lua をリンク配置 + 各 .ahk をログイン時起動登録
+  bootstrap.ps1     wezterm.lua をリンク配置 + フォント導入 + 各 .ahk をログイン時起動登録
 ```
+
+## 見た目
+
+`terminal-environment.md`（Mac 環境の仕様書）の外観を WezTerm で再現している。
+
+- **テーマ**: `kanagawabones`（WezTerm 組み込みの Kanagawa 系）。シェルの
+  シンタックスハイライト（ble.sh / `config/blerc`）とプロンプト周辺のアクセントも
+  同じ Kanagawa パレット（カーソル = springBlue `#7fb4ca`）で揃えている。
+- **フォント**: **Fira Code Nerd Font**（リガチャ + Nerd Font グリフ）。
+  `bootstrap.ps1` が Nerd Fonts の最新リリースから Fira Code / Symbols Nerd Font を
+  ユーザー領域に自動導入するので、手動インストールは不要（再ログインで全アプリに反映）。
+- **プロンプト**: Starship（Tokyo Night 系。`config/starship.toml`）。WSL 側の
+  home-manager が `~/.config/starship.toml` に配置する。
+- **透過**: `window_background_opacity = 0.8` + Windows は Acrylic でぼかし。
 
 ## セットアップ
 

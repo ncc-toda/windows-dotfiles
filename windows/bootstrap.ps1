@@ -1,11 +1,12 @@
 ﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-    WezTerm 設定の配置 + Caps Lock 2度押しトグルのセットアップ。
+    WezTerm 設定の配置 + フォント導入 + Caps Lock 2度押しトグルのセットアップ。
 
 .DESCRIPTION
       1. windows/wezterm.lua を %USERPROFILE%\.wezterm.lua にリンク
-      2. caps-toggle.ahk をログイン時に自動起動する登録 + 即起動
+      2. Fira Code Nerd Font + Symbols Nerd Font をユーザー領域に導入
+      3. caps-toggle.ahk / ime-shift.ahk をログイン時に自動起動する登録 + 即起動
 
     冪等(何度実行してもよい)。シンボリックリンク作成には「開発者モード」または
     管理者権限が必要。どちらも無い場合は自動でコピー方式にフォールバックする。
@@ -78,7 +79,90 @@ if (-not (Get-Command wezterm-gui.exe -ErrorAction SilentlyContinue) `
     Write-Warn2 "WezTerm が見つかりません。'winget install wez.wezterm' で導入してください。"
 }
 
-# --- 2. AutoHotkey スクリプト ----------------------------------------------
+# --- 2. フォント (Fira Code Nerd Font + Symbols Nerd Font) ------------------
+# WezTerm の本文フォント (terminal-environment.md §3)。Nerd Fonts の最新リリース
+# から ZIP を取得し、ユーザー領域 (管理者不要) にインストールする。既に導入済み
+# ならスキップ。ネットワーク不通等で失敗しても警告のみで bootstrap は止めない。
+Write-Host "==> フォントを導入" -ForegroundColor Cyan
+
+# GDI の AddFontResourceW + WM_FONTCHANGE ブロードキャスト用の P/Invoke。
+# ファイルのコピーとレジストリ登録"だけ"では DirectWrite (WezTerm が使う) が
+# 再ログインまで新規フォントを認識しない。この 2 つを呼んで初めて、実行中の
+# セッションでも即座に反映される。
+if (-not ('Native.FontApi' -as [type])) {
+    Add-Type -Namespace Native -Name FontApi -MemberDefinition @'
+[System.Runtime.InteropServices.DllImport("gdi32.dll", CharSet=System.Runtime.InteropServices.CharSet.Unicode)]
+public static extern int AddFontResourceW(string lpFileName);
+[System.Runtime.InteropServices.DllImport("user32.dll")]
+public static extern System.IntPtr SendMessageTimeout(System.IntPtr hWnd, uint Msg, System.IntPtr wParam, System.IntPtr lParam, uint fuFlags, uint uTimeout, out System.IntPtr lpdwResult);
+'@
+}
+
+function Broadcast-FontChange {
+    $HWND_BROADCAST = [IntPtr]0xffff
+    $WM_FONTCHANGE  = 0x001D
+    $SMTO_ABORTIFHUNG = 0x0002
+    $res = [IntPtr]::Zero
+    [void][Native.FontApi]::SendMessageTimeout(
+        $HWND_BROADCAST, $WM_FONTCHANGE, [IntPtr]::Zero, [IntPtr]::Zero,
+        $SMTO_ABORTIFHUNG, 1000, [ref]$res)
+}
+
+function Install-NerdFont($zipName, $probeFontFile) {
+    $userFonts = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts'
+    if (Test-Path (Join-Path $userFonts $probeFontFile)) {
+        # 既にファイルはある。ただし過去に AddFontResource 前の版で入れた場合は
+        # DirectWrite 未認識のことがあるので、登録だけは毎回やり直して確実にする。
+        Get-ChildItem -Path $userFonts -Filter '*.ttf' |
+            Where-Object { $_.BaseName -like ([IO.Path]::GetFileNameWithoutExtension($probeFontFile) -replace '-Regular$', '*') } |
+            ForEach-Object { [void][Native.FontApi]::AddFontResourceW($_.FullName) }
+        Write-Ok "既に導入済み: $zipName (登録を再確認)"
+        return
+    }
+    $tmp = Join-Path $env:TEMP ([IO.Path]::GetFileNameWithoutExtension($zipName))
+    $zipPath = "$tmp.zip"
+    try {
+        $url = "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/$zipName"
+        Write-Host "    取得中: $url"
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Invoke-WebRequest -Uri $url -OutFile $zipPath -UseBasicParsing
+        if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
+        Expand-Archive -Path $zipPath -DestinationPath $tmp -Force
+
+        if (-not (Test-Path $userFonts)) {
+            New-Item -ItemType Directory -Path $userFonts -Force | Out-Null
+        }
+        # ユーザー領域フォントはこのレジストリキーに登録すると再ログイン後に見える。
+        $regKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Fonts'
+        if (-not (Test-Path $regKey)) { New-Item -Path $regKey -Force | Out-Null }
+        $count = 0
+        Get-ChildItem -Path $tmp -Recurse -Include '*.ttf', '*.otf' | ForEach-Object {
+            $dest = Join-Path $userFonts $_.Name
+            Copy-Item $_.FullName $dest -Force
+            $regName = "$([IO.Path]::GetFileNameWithoutExtension($_.Name)) (TrueType)"
+            New-ItemProperty -Path $regKey -Name $regName -Value $dest `
+                -PropertyType String -Force | Out-Null
+            # 実行中セッションでも即使えるように GDI へ登録する。
+            [void][Native.FontApi]::AddFontResourceW($dest)
+            $count++
+        }
+        Write-Ok "${zipName}: $count 個のフォントを導入"
+    } catch {
+        Write-Warn2 "$zipName の導入に失敗: $($_.Exception.Message)"
+        Write-Warn2 "手動導入: https://www.nerdfonts.com/font-downloads (Fira Code / Symbols Nerd Font)"
+    } finally {
+        if (Test-Path $zipPath) { Remove-Item $zipPath -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $tmp)     { Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue }
+    }
+}
+
+Install-NerdFont 'FiraCode.zip'            'FiraCodeNerdFont-Regular.ttf'
+Install-NerdFont 'NerdFontsSymbolsOnly.zip' 'SymbolsNerdFontMono-Regular.ttf'
+# 実行中の全アプリ (WezTerm 含む) にフォント変更を通知する。
+Broadcast-FontChange
+Write-Ok "フォント変更を通知 (WezTerm を再起動すれば反映)"
+
+# --- 3. AutoHotkey スクリプト ----------------------------------------------
 Write-Host "==> AutoHotkey スクリプトを登録" -ForegroundColor Cyan
 $ahkExe = @(
     "$env:ProgramFiles\AutoHotkey\v2\AutoHotkey64.exe",
