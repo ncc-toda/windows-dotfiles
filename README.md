@@ -61,7 +61,7 @@ just --list         # show all recipes
 - **Shell:** bash with completion, sane history, `ble.sh` (autosuggestions +
   syntax highlighting), and modern aliases (`ls`→`eza`, `cat`→`bat`, ...).
 - **Prompt:** [starship](https://starship.rs/).
-- **Navigation:** [zoxide](https://github.com/ajeetdsouza/zoxide) (as `cd`) +
+- **Navigation:** [zoxide](https://github.com/ajeetdsouza/zoxide) (`z` / `zi`) +
   [fzf](https://github.com/junegunn/fzf).
 - **Per-project env:** [direnv](https://direnv.net/) + nix-direnv.
 - **CLI tools:** eza, bat, ripgrep, fd, jq, yq, delta, dust, duf, btop, ...

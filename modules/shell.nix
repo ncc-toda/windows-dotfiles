@@ -128,10 +128,11 @@
     enableBashIntegration = true;
   };
 
+  # zoxide は既定の `z` / `zi` で使う。`--cmd cd` を渡すと zoxide はコマンドを
+  # 追加ではなく「リネーム」するため、z/zi が消えて cd/cdi だけになる。
   programs.zoxide = {
     enable = true;
     enableBashIntegration = true;
-    options = [ "--cmd cd" ]; # `cd` becomes zoxide-powered
   };
 
   programs.direnv = {
