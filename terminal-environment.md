@@ -222,22 +222,34 @@ ble-face region='bg=#2d4f67'                  # waveBlue2（Kanagawa の Visual 
 そのまま使える全文:
 
 ```toml
+# starship.toml — プロンプト設定 (terminal-environment.md §5 準拠)
+#
+# 配色は Tokyo Night 系 (#1a1b26 / #7aa2f7 / #9ece6a など) で、ターミナルテーマ
+# (kanagawabones) とは独立にプロンプト内で完結している。Nerd Font 必須。
+# home-manager (modules/shell.nix) が xdg.configFile 経由でこのファイルを
+# ~/.config/starship.toml に配置する。
+
+# WSL の /mnt/c (Windows ファイルシステム) は遅く、デフォルトの git スキャンが
+# タイムアウトする。余裕を持たせる。
+scan_timeout = 100
+command_timeout = 1000
+
 format = """
-[](fg:#7aa2f7)\
+[](fg:#7aa2f7)\
 $os\
-[ ](fg:#7aa2f7 bg:#1a1b26)\
+[ ](fg:#7aa2f7 bg:#1a1b26)\
 $direnv\
 $directory\
 $git_branch\
 $git_status\
 $git_metrics\
-[](fg:#1a1b26)\
+[](fg:#1a1b26)\
 $fill\
-[](fg:#1a1b26)\
+[](fg:#1a1b26)\
 $conda\
-[](fg:#9ece6a bg:#1a1b26)\
+[](fg:#9ece6a bg:#1a1b26)\
 $python\
-[](fg:#9ece6a)
+[](fg:#9ece6a)
 \n$character\
 """
 
@@ -254,26 +266,26 @@ style = 'fg:#1a1b26 bg:#7aa2f7'
 disabled = false
 
 [os.symbols]
-Macos = "  " # nf-fa-apple
-Ubuntu = "  " # nf-linux-ubuntu
-Debian = "  " # nf-linux-debian
+Macos = "  " # nf-fa-apple
+Ubuntu = "  " # nf-linux-ubuntu
+Debian = "  " # nf-linux-debian
 
 [directory]
 truncation_length = 6
-truncation_symbol = ' ' # nf-fa-folder_open
+truncation_symbol = ' ' # nf-fa-folder_open
 truncate_to_repo = false
-home_symbol = ' ~' # nf-costum-home
+home_symbol = ' ~' # nf-costum-home
 style = 'fg:#7aa2f7 bg:#1a1b26'
 read_only = ' 󰌾 ' # nf-md-lock
 read_only_style = 'fg:#f7768e bg:#1a1b26'
 format = '[$path]($style)[$read_only]($read_only_style)'
 
 [git_branch]
-symbol = '  ' # nf-fa-github_alt, nf-fa-code_fork
+symbol = ' ' # nf-fa-code_fork (旧: nf-fa-github_alt)
 truncation_length = 4
 truncation_symbol = ''
 style = 'fg:#7aa2f7 bg:#1a1b26'
-format = '[  $symbol$branch(:$remote_branch)]($style)' # nf-pl-left_soft_divider
+format = '[ $symbol$branch(:$remote_branch)]($style)' # nf-pl-left_soft_divider
 
 [git_status]
 style = 'fg:#e0af68 bg:#1a1b26'
@@ -300,13 +312,13 @@ symbol = '─'
 style = 'blue'
 
 [conda]
-symbol = ' ' # nf-dev-python
+symbol = ' ' # nf-dev-python
 style = 'fg:#9ece6a bg:#1a1b26'
 format = '[ $symbol$environment ]($style)'
 ignore_base = false
 
 [python]
-symbol = ' ' # nf-dev-python
+symbol = ' ' # nf-dev-python
 format = '[ ${symbol}${pyenv_prefix}(${version})(\($virtualenv\))]($style)'
 pyenv_version_name = false
 style = 'fg:#1a1b26 bg:#9ece6a'
@@ -323,22 +335,23 @@ error_symbol = '[❯](bold red)'
 [cmd_duration]
 min_time = 1
 style = 'fg:#e0af68'
-format = "[   $duration]($style)" # nf-pl-right_soft_divider, nf-mdi-clock
+format = "[ 󰅐 $duration]($style)" # nf-pl-right_soft_divider, nf-md-clock
 
 [lua]
-symbol = "" # nf-seti-lua
-format = '[  $symbol $version](blue)' # nf-pl-right_soft_divider
+symbol = "" # nf-seti-lua
+format = '[ $symbol $version](blue)' # nf-pl-right_soft_divider
 
 [rust]
-symbol = "" # nf-dev-rust
-format = '[  $symbol $version](red)' # nf-pl-right_soft_divider
+symbol = "" # nf-dev-rust
+format = '[ $symbol $version](red)' # nf-pl-right_soft_divider
 
 [time]
 disabled = false
 style = 'fg:#73daca'
-format = '[   $time]($style)' # nf-pl-right_soft_divider, nf-fa-clock_o
+format = '[  $time]($style)' # nf-pl-right_soft_divider, nf-fa-clock_o
 time_format = '%T'
 utc_time_offset = '+9'
+
 ```
 
 ## 6. CLI ツール一覧
