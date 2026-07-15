@@ -169,3 +169,12 @@ ln -sf ~/dotfiles/windows/wezterm.lua ~/.wezterm.lua
   このファイルは**プラグイン側では書かれない**（README: "you must include a way to write
   the current workspace"）。`wezterm.lua` が保存のたびに `write_current_state()` で
   書いている。これが無いと 0 バイトのままで永久に復元されない。
+- **上流はアーカイブ済み**（"This project is archived and no longer maintained"）。
+  バグ修正は入らないので、不具合は `wezterm.lua` 側で回避する必要がある。将来
+  乗り換えるならフォークを探すこと。
+- **起動時のコンソール窓チラつき対策**: resurrect の `init()` は require のたびに
+  `state/{workspace,window,tab}` へ `os.execute('mkdir ...')` を実行し、Windows では
+  cmd.exe が起動して窓が一瞬光る（設定は起動ごとに 2 回評価されるので計 6 回）。
+  この mkdir は引用符と `/p` フラグの実装ミスで元から失敗しており、かつ 3 つの
+  ディレクトリは repo が同梱しているため不要。`wezterm.lua` は require の間だけ
+  `os.execute` を無効化してこれを消している。

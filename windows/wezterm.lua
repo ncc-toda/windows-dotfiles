@@ -14,9 +14,31 @@ local act = wezterm.action
 -- セッション復元プラグイン (resurrect.wezterm) ------------------------------
 -- 初回ロード時に GitHub から取得する。オフライン等で取れなくても本体設定が
 -- 死なないよう pcall で包み、失敗時は復元機能だけ無効化する。
-local ok_resurrect, resurrect = pcall(function()
-  return wezterm.plugin.require 'https://github.com/MLFlexer/resurrect.wezterm'
-end)
+--
+-- os.execute の一時差し替えについて:
+--   resurrect の init() は require のたびに change_state_save_dir() を呼び、
+--   state/{workspace,window,tab} の 3 つに対して utils.ensure_folder_exists() を
+--   実行する。その Windows 分岐が os.execute('mkdir /p "...') で、Lua の os.execute
+--   は Windows では cmd.exe を起動するため、コンソール窓が一瞬開いては消える。
+--   設定は起動ごとに 2 回評価されるので毎回 6 回チラつく。
+--   しかもこの mkdir は元から動いていない:
+--     - '"' が gsub の置換文字列側に紛れており ('\\' .. '"')、コマンドが閉じない
+--     - /p は Unix の -p の綴り間違いで cmd.exe に無いフラグ
+--   そして state/{workspace,window,tab} は repo が .gitignore 同梱で持っているため
+--   clone 時点で必ず存在し、この mkdir はそもそも不要。
+--   上流はアーカイブ済み (README: "This project is archived and no longer maintained")
+--   で修正は入らないため、require の間だけ os.execute を無効化してチラつきを消す。
+--   復元後に元へ戻すので、実行時の os.execute (fuzzy_loader の wscript 起動や、
+--   独自パスへ change_state_save_dir する場合の mkdir) には影響しない。
+local ok_resurrect, resurrect = (function()
+  local real_execute = os.execute
+  os.execute = function() return true end
+  local ok, mod = pcall(function()
+    return wezterm.plugin.require 'https://github.com/MLFlexer/resurrect.wezterm'
+  end)
+  os.execute = real_execute
+  return ok, mod
+end)()
 if not ok_resurrect then
   wezterm.log_error 'resurrect.wezterm を読み込めませんでした。セッション復元は無効です。'
   resurrect = nil
