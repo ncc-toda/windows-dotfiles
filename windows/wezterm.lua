@@ -213,8 +213,25 @@ if resurrect then
 
   wezterm.on('resurrect.state_manager.periodic_save.finished', mark_current_workspace)
 
+  -- 間隔について:
+  --   WezTerm には「終了時」に相当するイベントが無く、resurrect にも終了時保存は
+  --   無い。つまり state を書くのはこの定期タイマーと Ctrl+A → Shift+S だけで、
+  --   最後の保存から終了までの変更は"まるごと"失われる (実測: タブを 3 枚作って
+  --   5 秒で終了させると state ファイル自体が作られなかった)。60 秒だと「タブを
+  --   足してすぐ閉じる」が丸ごと消え、前回と同じ状態が復元され続ける。
+  --   保存は WSL ドメインではスクロールバックを含まず 1KB 未満と安価なので
+  --   (pane_tree.lua の domain == "local" 分岐を参照)、間隔を詰めて取り逃しを減らす。
+  --   確実に残したいときは Ctrl+A → Shift+S で明示保存する。
+  --
+  -- 注意 (触るな):
+  --   periodic_save は call_after で自分を再登録し続けるチェーンで、設定は起動ごとに
+  --   2 回評価されるためチェーンも 2 本張られる。一見無駄だが、1 回目の評価
+  --   (mux 側) のタイマーは発火せず、実際に保存しているのは 2 回目 (GUI 側) だけ。
+  --   wezterm.GLOBAL でチェーンを 1 本に間引くと、生き残るのが 1 回目の死んだ方に
+  --   なり保存が完全に止まる (実測済み)。重複してもチェーンは 1 本しか発火しない
+  --   ので、間隔は設定値どおりになる。
   resurrect.state_manager.periodic_save({
-    interval_seconds = 60, -- 短めにして直近のパス/レイアウトを取り逃しにくくする
+    interval_seconds = 5,
     save_workspaces = true,
     save_windows = false,
     save_tabs = false,
