@@ -43,6 +43,12 @@ winget install AutoHotkey.AutoHotkey
 シンボリックリンクを使うので **開発者モード**を有効化しておく
 （設定 → プライバシーとセキュリティ → 開発者向け）。無い場合はコピー配置に自動フォールバック。
 
+> [!IMPORTANT]
+> 開発者モードが ON でも、リンク先が `\\wsl.localhost\...` の UNC パスだと管理者権限を
+> 要求されて symlink 作成に失敗し、**コピー配置になる**。コピーだと `wezterm.lua` を
+> 編集しても Windows 側に反映されないので、編集のたびに bootstrap の再実行が必要。
+> 実体かリンクかは `ls -la /mnt/c/Users/<user>/.wezterm.lua` の先頭が `l` か `-` かで判る。
+
 あとは **`just switch` だけ**。`modules/windows.nix` が WSL 上でのみ `bootstrap.ps1`
 を呼び、`wezterm.lua` の配置と `caps-toggle.ahk` の起動登録を自動で行う。
 
@@ -153,3 +159,13 @@ ln -sf ~/dotfiles/windows/wezterm.lua ~/.wezterm.lua
 - **パス追従の土台**: 分割/新タブ/復元が「今開いているパス」で開くのは、bash が
   **OSC 7 で現在ディレクトリを WezTerm に通知**しているため（`modules/shell.nix` で設定）。
   これが無いと WezTerm は cwd を追跡できず、常にホームで開く。
+- **復元されないもの**: 復元されるのはレイアウトと cwd だけで、ペインで動いていた
+  プロセス（`claude`、`vim` 等）は復元されず、そのパスでシェルが開くだけ。
+- **保存するのは workspace 状態のみ**（`save_windows`/`save_tabs` は `false`）。これらは
+  ウィンドウ名・タブ名ごとに別ファイルを作るため、Claude Code のようにタイトルを
+  書き換え続けるアプリがあると状態ファイルが際限なく増える。workspace 状態だけで
+  ウィンドウ/タブ/ペイン/cwd はすべて含まれるので復元には十分。
+- **起動時復元の要**: プラグインは復元対象を `state/current_state` ファイルから読むが、
+  このファイルは**プラグイン側では書かれない**（README: "you must include a way to write
+  the current workspace"）。`wezterm.lua` が保存のたびに `write_current_state()` で
+  書いている。これが無いと 0 バイトのままで永久に復元されない。

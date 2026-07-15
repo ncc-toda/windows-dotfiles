@@ -150,36 +150,52 @@ end)
 config.window_decorations = 'INTEGRATED_BUTTONS|RESIZE'
 
 -- 起動時に最大化 + (あれば)前回セッションを復元する ------------------------
--- resurrect_on_gui_startup は保存状態があれば復元して true を、無ければ(初回等)
--- 何もせず false を返す。戻り値で分岐することで、初回の「窓が開かない」問題も
--- 復元時の二重窓も避けつつ、どちらの経路でも最大化して「画面最大」で出す。
+-- 注意: resurrect_on_gui_startup() の戻り値は pcall の成否であって「復元したか」
+-- ではない。復元対象が無くても true を返すので、戻り値で分岐すると窓を一つも
+-- 開かないまま終わる。実際に mux にウィンドウができたかで判定する。
+-- また同関数は引数を取らない (cmd を渡しても無視される)。
 local function maximize_gui(win)
   local gui = win:gui_window()
   if gui then gui:maximize() end
 end
 
 wezterm.on('gui-startup', function(cmd)
-  local restored = false
   if resurrect then
-    restored = resurrect.state_manager.resurrect_on_gui_startup(cmd)
+    pcall(resurrect.state_manager.resurrect_on_gui_startup)
   end
-  if restored then
-    for _, win in ipairs(wezterm.mux.all_windows()) do
-      maximize_gui(win)
-    end
-  else
+  local windows = wezterm.mux.all_windows()
+  if #windows == 0 then
+    -- 復元できなかった(初回・状態なし・失敗)ので通常起動する。
     local _, _, window = wezterm.mux.spawn_window(cmd or {})
-    maximize_gui(window)
+    windows = { window }
+  end
+  for _, win in ipairs(windows) do
+    maximize_gui(win)
   end
 end)
 
 -- resurrect: 定期スナップショット (これを起動時復元が読む) --------------------
+-- save_windows/save_tabs はウィンドウ名・タブ名ごとに別ファイルを作る。Claude Code
+-- のようにタイトルを書き換え続けるアプリだと状態ファイルが無限に増え、Ctrl+A→r の
+-- 一覧がゴミで埋まる。起動時復元が読むのは workspace 状態(ウィンドウ/タブ/ペイン/
+-- cwd を全部含む)だけなので、workspace のみ保存する。
 if resurrect then
+  -- 起動時復元は state/current_state ファイル(「名前\n種別」)を読んで対象を決める
+  -- が、プラグインはこのファイルを自動では書かない (README: "you must include a way
+  -- to write the current workspace")。書かないと 0 バイトのままで永久に復元されない。
+  -- 保存のたびに現在のワークスペース名を書き込む。
+  local function mark_current_workspace()
+    resurrect.state_manager.write_current_state(
+      wezterm.mux.get_active_workspace(), 'workspace')
+  end
+
+  wezterm.on('resurrect.state_manager.periodic_save.finished', mark_current_workspace)
+
   resurrect.state_manager.periodic_save({
     interval_seconds = 60, -- 短めにして直近のパス/レイアウトを取り逃しにくくする
     save_workspaces = true,
-    save_windows = true,
-    save_tabs = true,
+    save_windows = false,
+    save_tabs = false,
   })
 end
 
@@ -247,11 +263,13 @@ end
 
 -- セッション保存/復元のキー (resurrect 有効時のみ) --------------------------
 if resurrect then
-  -- 手動保存: Ctrl+A → S
+  -- 手動保存: Ctrl+A → S (定期保存と同様、起動時復元の目印も書く)
   table.insert(config.keys, {
     key = 'S', mods = 'LEADER|SHIFT',
     action = wezterm.action_callback(function()
       resurrect.state_manager.save_state(resurrect.workspace_state.get_workspace_state())
+      resurrect.state_manager.write_current_state(
+        wezterm.mux.get_active_workspace(), 'workspace')
     end),
   })
   -- 復元(ファジー選択): Ctrl+A → R
