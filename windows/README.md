@@ -108,21 +108,23 @@ Leader なしの単発キー:
 | `Ctrl+[` / `Ctrl+]` | 前 / 次のペインへ |
 | `Ctrl+Shift+P` | コマンドパレット（メニュー相当） |
 
-## 前提: この PC は CapsLock → F13 リマップ済み
+## Caps Lock トグルは F13/CapsLock を自動判別する
 
-このマシンは**物理 CapsLock がレジストリで F13 にリマップ**されている
-（`move cursor.ahk` が `F13 & …` を修飾キーに使うため）。よって AHK からは
-CapsLock ではなく **F13** が届くので、`caps-toggle.ahk` は **F13 の2度押し**を見る。
+`caps-toggle.ahk` は起動時にレジストリの Scancode Map を読んで、監視するキーを
+自分で決める。配布先のマシンごとにリマップの有無が違うため、決め打ちしない。
 
-- リマップ場所:
-  `HKLM\SYSTEM\CurrentControlSet\Control\Keyboard Layout` の `Scancode Map`
-  （`… 02 00 00 00 64 00 3A 00 …` = `3A`(CapsLock)→`64`(F13)）。
-- `caps-toggle.ahk` は `~*F13`（`~`=信号を素通し）で拾うため、`move cursor.ahk` の
-  F13 修飾機能を壊さない。押しっぱなしのオートリピートも `held` ガードで無視する。
+- **CapsLock → F13 リマップ済みのマシン**（開発者の PC がこれ。`move cursor.ahk`
+  が `F13 & …` を修飾キーに使うため CapsLock を F13 に飛ばしている）では、AHK に
+  CapsLock は届かず **F13** が来る。→ `~*F13`（`~`=信号を素通し）で **F13 の2度押し**
+  を見る。素通しなので `move cursor.ahk` の F13 修飾機能を壊さない。
+- **リマップの無い素のマシン**（学生の PC はこちら）では **CapsLock** がそのまま
+  届く。→ `*CapsLock` で拾い、`SetCapsLockState "AlwaysOff"` で単押しの大文字ロックを
+  止める（Mac の Caps Lock と同じ感覚になる）。
 
-**別マシンで使う場合**: CapsLock→F13 リマップが無いなら、`caps-toggle.ahk` の `F13`
-を `CapsLock` に置き換える（`~*F13` → `*CapsLock`、単押し大文字ロックを消すなら
-先頭に `SetCapsLockState "AlwaysOff"` を足す）。または同じ Scancode Map を入れて再起動する。
+判別の実体は Scancode Map 内に「変換後=F13(64 00) / 変換前=CapsLock(3A 00)」の
+エントリ（`64003A00`）があるか。リマップ場所は
+`HKLM\SYSTEM\CurrentControlSet\Control\Keyboard Layout` の `Scancode Map`。
+押しっぱなしのオートリピートはどちらの経路でも `held` ガードで無視する。
 
 ## Mac との共用
 
