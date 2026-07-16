@@ -33,7 +33,6 @@
     btop
     dust # du replacement
     duf # df replacement
-    delta # nicer git diffs (wired up in modules/git.nix)
     curl
     wget
     unzip

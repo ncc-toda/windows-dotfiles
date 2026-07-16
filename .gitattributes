@@ -1,0 +1,20 @@
+# PowerShell / AutoHotkey は UTF-8 BOM 付きで配布する。
+#
+# 理由: 学生が叩く既定の powershell.exe は Windows PowerShell 5.1 で、BOM の無い
+# UTF-8 を システムの ANSI コードページ (日本語環境では cp932/Shift-JIS) として
+# 読む。日本語コメントのバイト列に \ や " へ化ける箇所があると構文が壊れて動かない。
+# BOM (先頭 3 バイト EF BB BF) があれば 5.1 も UTF-8 と判別する。
+#
+# BOM はファイル先頭のバイトそのものなので、-text (バイナリ扱い) にして git の
+# 改行正規化を一切かけないことで、コミット済みの BOM と CRLF をそのまま保つ。
+# こうすればエディタや git のどの環境でも BOM が落ちない。
+*.ps1 -text
+*.ahk -text
+
+# WSL 内で実行するシェルスクリプトは LF 固定 (CRLF だと bash が \r で誤動作する)。
+*.sh  text eol=lf
+
+# Nix / lua / toml は LF。
+*.nix  text eol=lf
+*.lua  text eol=lf
+*.toml text eol=lf

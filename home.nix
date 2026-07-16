@@ -1,4 +1,4 @@
-{ ... }:
+{ local, ... }:
 {
   imports = [
     ./modules/shell.nix
@@ -7,8 +7,10 @@
     ./modules/windows.nix
   ];
 
-  home.username = "tetsuo";
-  home.homeDirectory = "/home/tetsuo";
+  # ユーザー名/ホームは local.nix から (flake.nix 参照)。マシンごとに違うので
+  # ここに直接書かない。
+  home.username = local.username;
+  home.homeDirectory = local.homeDirectory;
 
   # Do not change after the first activation (matches the home-manager release
   # the config was written against). Not the version you upgrade over time.

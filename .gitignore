@@ -2,3 +2,7 @@ result
 result-*
 .direnv/
 .claude/
+
+# マシン固有の設定 (ユーザー名 / git identity)。scripts/setup.sh が生成する。
+# 追跡はしないが、flake が読めるよう setup.sh が `git add -f` で index に載せる。
+local.nix
