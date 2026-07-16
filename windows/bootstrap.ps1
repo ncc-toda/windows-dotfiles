@@ -11,6 +11,10 @@
     冪等(何度実行してもよい)。シンボリックリンク作成には「開発者モード」または
     管理者権限が必要。どちらも無い場合は自動でコピー方式にフォールバックする。
 
+    触った物はすべて %LOCALAPPDATA%\ncc-dotfiles\manifest.json に記録し、既存
+    ファイルは同フォルダの backup\<日時>\ へ退避する。uninstall.ps1 がそれを
+    逆再生して原状復帰する (windows/state.ps1 参照)。
+
 .EXAMPLE
     # WSL のシェルから:
     /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -ExecutionPolicy Bypass \
@@ -21,6 +25,9 @@ param()
 
 $ErrorActionPreference = 'Stop'
 $here = $PSScriptRoot
+
+. (Join-Path $here 'state.ps1')
+$manifest = Get-NccManifest
 
 function Write-Ok($m)   { Write-Host "    OK: $m"   -ForegroundColor Green }
 function Write-Warn2($m){ Write-Host "    警告: $m" -ForegroundColor Yellow }
@@ -36,20 +43,28 @@ function Test-CanSymlink {
 function Install-Link($source, $target) {
     $dir = Split-Path $target -Parent
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    $backupPath = $null
     if (Test-Path $target) {
         $item = Get-Item $target -Force
         if ($item.LinkType -eq 'SymbolicLink') {
             Remove-Item $target -Force
         } elseif ((Get-FileHash $target).Hash -eq (Get-FileHash $source).Hash) {
-            # 既に同一内容のコピーが置かれている → 何もしない。
+            # 既に同一内容のコピーが置かれている → 置き直さない。
             # (再実行で本物のバックアップをコピーで上書きしてしまうのを防ぐ)
+            # ただし台帳には載せる。載せないと、台帳を作り直した後の uninstall が
+            # 「自分が置いたファイル」を認識できず、置き去りにしてしまう。
             Write-Ok "最新: $target (コピー済み)"
+            $script:manifest = Add-NccEntry $script:manifest @{
+                type = 'file'; path = $target; mode = 'copy'; backup = $null
+            } @('path')
             return
         } else {
-            $bak = "$target.backup"
-            if (Test-Path $bak) { Remove-Item $bak -Force }
-            Move-Item $target $bak -Force
-            Write-Warn2 "既存を $bak に退避しました"
+            # 学生が元から持っていたファイル。日時付きフォルダへ退避して台帳に残す。
+            # (以前は "$target.backup" へ置いて既存の .backup を消していたため、
+            #  2 回目の実行で「本物の元ファイル」が失われていた)
+            $backupPath = Join-Path (Get-NccBackupDir) (Split-Path $target -Leaf)
+            Move-Item $target $backupPath -Force
+            Write-Warn2 "既存を退避しました: $backupPath"
         }
     }
     # symlink を試し、ダメならコピーにフォールバックする。
@@ -57,17 +72,23 @@ function Install-Link($source, $target) {
     # 管理者権限が要求されて失敗するため、Test-CanSymlink だけに頼らず実際に
     # 作ってみて例外を握る(ここで throw させると $ErrorActionPreference=Stop で
     # bootstrap 全体が中断し、後段の AHK 登録まで巻き添えで止まる)。
+    $mode = 'copy'
     if (Test-CanSymlink) {
         try {
             New-Item -ItemType SymbolicLink -Path $target -Target $source -ErrorAction Stop | Out-Null
             Write-Ok "リンク: $target -> $source"
-            return
+            $mode = 'symlink'
         } catch {
             Write-Warn2 "シンボリックリンク不可(WSL の UNC パス等)。コピー配置にフォールバック。"
         }
     }
-    Copy-Item $source $target -Force
-    Write-Ok "コピー: $target"
+    if ($mode -eq 'copy') {
+        Copy-Item $source $target -Force
+        Write-Ok "コピー: $target"
+    }
+    $script:manifest = Add-NccEntry $script:manifest @{
+        type = 'file'; path = $target; mode = $mode; backup = $backupPath
+    } @('path')
 }
 
 # --- 1. WezTerm 設定 --------------------------------------------------------
@@ -113,7 +134,7 @@ function Broadcast-FontChange {
 $script:UserFontsKey   = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts'
 $script:LegacyFontsKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Fonts'
 
-function Register-UserFont($path) {
+function Register-UserFont($path, [bool]$installedByUs) {
     if (-not (Test-Path $script:UserFontsKey)) {
         New-Item -Path $script:UserFontsKey -Force | Out-Null
     }
@@ -127,6 +148,11 @@ function Register-UserFont($path) {
         Remove-ItemProperty -Path $script:LegacyFontsKey -Name $regName `
             -Force -ErrorAction SilentlyContinue
     }
+    # installedByUs=false は「学生が元から入れていたフォント」。uninstall では
+    # レジストリ登録だけ外し、ファイル本体は消さない (人の物を消さない)。
+    $script:manifest = Add-NccEntry $script:manifest @{
+        type = 'font'; path = $path; regName = $regName; installedByUs = $installedByUs
+    } @('path')
 }
 
 function Install-NerdFont($zipName, $probeFontFile) {
@@ -134,10 +160,21 @@ function Install-NerdFont($zipName, $probeFontFile) {
     if (Test-Path (Join-Path $userFonts $probeFontFile)) {
         # ファイルはある。ただし登録は毎回やり直す: 旧版は誤ったレジストリキーに
         # 書いていたので、ファイルが揃っていても Windows からは見えないことがある。
+        # 既にファイルがある = 我々が前回入れたか、学生が元から持っていたか区別が
+        # つかないため、台帳に既存記録があればその installedByUs を引き継ぐ。
         $n = 0
         Get-ChildItem -Path $userFonts -Filter '*.ttf' |
             Where-Object { $_.BaseName -like ([IO.Path]::GetFileNameWithoutExtension($probeFontFile) -replace '-Regular$', '*') } |
-            ForEach-Object { Register-UserFont $_.FullName; $n++ }
+            ForEach-Object {
+                # Where-Object の中では $_ が台帳エントリに変わるので、外側の
+                # ファイルパスは先に別変数へ退避しておく。
+                $fontPath = $_.FullName
+                $known = @($script:manifest.entries) |
+                    Where-Object { $_.type -eq 'font' -and $_.path -eq $fontPath } |
+                    Select-Object -First 1
+                Register-UserFont $fontPath ([bool]($known -and $known.installedByUs))
+                $n++
+            }
         Write-Ok "既に導入済み: $zipName ($n 個を登録し直し)"
         return
     }
@@ -157,12 +194,15 @@ function Install-NerdFont($zipName, $probeFontFile) {
         $count = 0
         Get-ChildItem -Path $tmp -Recurse -Include '*.ttf', '*.otf' | ForEach-Object {
             $dest = Join-Path $userFonts $_.Name
+            $preExisting = Test-Path $dest
             Copy-Item $_.FullName $dest -Force
-            Register-UserFont $dest
+            Register-UserFont $dest (-not $preExisting)
             $count++
         }
         Write-Ok "${zipName}: $count 個のフォントを導入"
     } catch {
+        # 学校のネットワークが GitHub を塞いでいる等。フォントが無いと Starship の
+        # アイコンが豆腐になるだけで、シェル自体は動くのでここでは止めない。
         Write-Warn2 "$zipName の導入に失敗: $($_.Exception.Message)"
         Write-Warn2 "手動導入: https://www.nerdfonts.com/font-downloads (Fira Code / Symbols Nerd Font)"
     } finally {
@@ -179,10 +219,17 @@ Write-Ok "フォント変更を通知 (WezTerm を再起動すれば反映)"
 
 # --- 3. AutoHotkey スクリプト ----------------------------------------------
 Write-Host "==> AutoHotkey スクリプトを登録" -ForegroundColor Cyan
+# v2 のみを探す。caps-toggle.ahk / ime-shift.ahk は #Requires AutoHotkey v2.0 な
+# ので、v1 しか入っていないマシンで v1 に食わせると構文エラーで即死する。v1 と
+# v2 は併存できるので、v1 使いの学生からは v1 を取り上げない。
 $ahkExe = @(
     "$env:ProgramFiles\AutoHotkey\v2\AutoHotkey64.exe",
+    "$env:ProgramFiles\AutoHotkey\v2\AutoHotkey32.exe",
     "$env:ProgramFiles\AutoHotkey\v2\AutoHotkey.exe",
-    "$env:ProgramFiles\AutoHotkey\AutoHotkey.exe"
+    "${env:ProgramFiles(x86)}\AutoHotkey\v2\AutoHotkey64.exe",
+    "${env:ProgramFiles(x86)}\AutoHotkey\v2\AutoHotkey32.exe",
+    "$env:LOCALAPPDATA\Programs\AutoHotkey\v2\AutoHotkey64.exe",
+    "$env:LOCALAPPDATA\Programs\AutoHotkey\v2\AutoHotkey32.exe"
 ) | Where-Object { Test-Path $_ } | Select-Object -First 1
 
 # 1本の .ahk を「ログイン時自動起動に登録 + 今すぐ起動」する。冪等。
@@ -197,17 +244,24 @@ function Register-Ahk($ahkExe, $scriptName, $lnkName, $description) {
     $lnk.Description       = $description
     $lnk.Save()
     Write-Ok "自動起動を登録: $lnkPath"
+    $script:manifest = Add-NccEntry $script:manifest @{
+        type = 'startup'; path = $lnkPath; script = $ahkScript
+    } @('path')
     Start-Process -FilePath $ahkExe -ArgumentList ('"' + $ahkScript + '"')
     Write-Ok "$scriptName を起動しました"
 }
 
 if (-not $ahkExe) {
     Write-Warn2 "AutoHotkey v2 が見つかりません。'winget install AutoHotkey.AutoHotkey' で導入してください。"
+    Write-Warn2 "(v1 しか無い場合も同じ。v1/v2 は併存できるので v1 はそのままで構いません)"
 } else {
     Write-Ok "AutoHotkey: $ahkExe"
     Register-Ahk $ahkExe 'caps-toggle.ahk' 'caps-toggle.lnk' 'Caps Lock 2度押しでターミナルをトグル'
     Register-Ahk $ahkExe 'ime-shift.ahk'   'ime-shift.lnk'   '左Shift=英数 / 右Shift=かな (Mac風IME切替)'
 }
 
+Save-NccManifest $manifest
+
 Write-Host ""
 Write-Host "完了。Caps Lock 2回 → WezTerm 表示/非表示、左Shift=英数 / 右Shift=かな。" -ForegroundColor Cyan
+Write-Host "変更の記録: $script:NccManifest (元に戻すには uninstall.ps1)" -ForegroundColor DarkGray
