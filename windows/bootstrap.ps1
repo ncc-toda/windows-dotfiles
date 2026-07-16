@@ -108,15 +108,37 @@ function Broadcast-FontChange {
         $SMTO_ABORTIFHUNG, 1000, [ref]$res)
 }
 
+# ユーザー領域フォントを登録するキーは "Windows NT" 配下。"Windows" 配下 (旧版が
+# 使っていた) に書いても Windows は読まないので、ログオンし直しても認識されない。
+$script:UserFontsKey   = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts'
+$script:LegacyFontsKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Fonts'
+
+function Register-UserFont($path) {
+    if (-not (Test-Path $script:UserFontsKey)) {
+        New-Item -Path $script:UserFontsKey -Force | Out-Null
+    }
+    $regName = "$([IO.Path]::GetFileNameWithoutExtension($path)) (TrueType)"
+    New-ItemProperty -Path $script:UserFontsKey -Name $regName -Value $path `
+        -PropertyType String -Force | Out-Null
+    # 実行中セッションでも即使えるように GDI へ登録する。
+    [void][Native.FontApi]::AddFontResourceW($path)
+    # 旧版が誤ったキーに残したゴミを掃除する。
+    if (Test-Path $script:LegacyFontsKey) {
+        Remove-ItemProperty -Path $script:LegacyFontsKey -Name $regName `
+            -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Install-NerdFont($zipName, $probeFontFile) {
     $userFonts = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts'
     if (Test-Path (Join-Path $userFonts $probeFontFile)) {
-        # 既にファイルはある。ただし過去に AddFontResource 前の版で入れた場合は
-        # DirectWrite 未認識のことがあるので、登録だけは毎回やり直して確実にする。
+        # ファイルはある。ただし登録は毎回やり直す: 旧版は誤ったレジストリキーに
+        # 書いていたので、ファイルが揃っていても Windows からは見えないことがある。
+        $n = 0
         Get-ChildItem -Path $userFonts -Filter '*.ttf' |
             Where-Object { $_.BaseName -like ([IO.Path]::GetFileNameWithoutExtension($probeFontFile) -replace '-Regular$', '*') } |
-            ForEach-Object { [void][Native.FontApi]::AddFontResourceW($_.FullName) }
-        Write-Ok "既に導入済み: $zipName (登録を再確認)"
+            ForEach-Object { Register-UserFont $_.FullName; $n++ }
+        Write-Ok "既に導入済み: $zipName ($n 個を登録し直し)"
         return
     }
     $tmp = Join-Path $env:TEMP ([IO.Path]::GetFileNameWithoutExtension($zipName))
@@ -132,18 +154,11 @@ function Install-NerdFont($zipName, $probeFontFile) {
         if (-not (Test-Path $userFonts)) {
             New-Item -ItemType Directory -Path $userFonts -Force | Out-Null
         }
-        # ユーザー領域フォントはこのレジストリキーに登録すると再ログイン後に見える。
-        $regKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Fonts'
-        if (-not (Test-Path $regKey)) { New-Item -Path $regKey -Force | Out-Null }
         $count = 0
         Get-ChildItem -Path $tmp -Recurse -Include '*.ttf', '*.otf' | ForEach-Object {
             $dest = Join-Path $userFonts $_.Name
             Copy-Item $_.FullName $dest -Force
-            $regName = "$([IO.Path]::GetFileNameWithoutExtension($_.Name)) (TrueType)"
-            New-ItemProperty -Path $regKey -Name $regName -Value $dest `
-                -PropertyType String -Force | Out-Null
-            # 実行中セッションでも即使えるように GDI へ登録する。
-            [void][Native.FontApi]::AddFontResourceW($dest)
+            Register-UserFont $dest
             $count++
         }
         Write-Ok "${zipName}: $count 個のフォントを導入"
