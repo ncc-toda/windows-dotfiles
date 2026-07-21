@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
     install.ps1 が加えた変更を、記録 (manifest) を逆再生して元に戻す。
@@ -29,6 +29,7 @@ $KeepApps   = [bool]$env:NCC_KEEP_APPS
 $Yes        = [bool]$env:NCC_YES
 
 $ErrorActionPreference = 'Stop'
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force -ErrorAction SilentlyContinue
 # 配布タグ (install.ps1 と揃える)。ネットから state.ps1 を拾う際の ref。
 $Ref = 'v1.0'
 
@@ -61,7 +62,8 @@ if (-not $statePs1 -or -not (Test-Path $statePs1)) {
         -OutFile $tmp
     $statePs1 = $tmp
 }
-. $statePs1
+# 文字列経由で読み込む (実行ポリシー Restricted のマシンでも止まらないように)。
+. ([scriptblock]::Create((Get-Content -Raw $statePs1)))
 
 if (-not (Test-Path $script:NccManifest)) {
     Warn "変更の記録 ($script:NccManifest) がありません。取り消す対象がありません。"

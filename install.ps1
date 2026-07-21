@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
     ターミナル環境をコマンド1つでセットアップする (学生向けの入り口)。
@@ -32,6 +32,9 @@ $GitEmail = $env:NCC_GIT_EMAIL
 $Yes      = [bool]$env:NCC_YES
 
 $ErrorActionPreference = 'Stop'
+# 既定が Restricted のマシンでも、このプロセスに限りスクリプトを動かせるようにする。
+# (GP 強制環境では効かないが、その場合も state.ps1 は文字列経由で読むので大丈夫)
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force -ErrorAction SilentlyContinue
 # 配布は固定タグ (動作確認済みスナップショット) から取る。ここを 1 か所変えれば、
 # Windows 側スクリプト (state.ps1 / setup.sh) の ZIP も、WSL 側 dotfiles の tar.gz
 # も、setup.sh に渡す取得先も、すべて同じ ref に揃う。開発版を試すなら 'main'。
@@ -118,7 +121,11 @@ $src = Get-ChildItem $work -Directory | Where-Object { $_.Name -like 'windows-do
 if (-not $src) { Fail "ZIP の中身が想定と違います" }
 Ok "取得しました: $($src.FullName)"
 
-. (Join-Path $src.FullName 'windows\state.ps1')
+# state.ps1 を「ファイルとして」dot-source すると、実行ポリシーが Restricted の
+# マシン (学校/ラボに多い) で「スクリプトの実行が無効」になり止まる。文字列として
+# 読み込みスクリプトブロック化すれば、実行ポリシー (ディスク上の .ps1 にのみ適用)
+# を回避して関数を取り込める。Group Policy 強制の環境でも効く。
+. ([scriptblock]::Create((Get-Content -Raw (Join-Path $src.FullName 'windows\state.ps1'))))
 $manifest = Get-NccManifest
 
 # ---------------------------------------------------------------------------
