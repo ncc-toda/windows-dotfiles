@@ -289,11 +289,14 @@ if ($existing -notcontains $Distro) {
     # リレーが \ を食う問題も同時に避ける)。
     Invoke-Wsl -d $Distro -u root -- bash -c "{ echo '[boot]'; echo 'systemd=true'; echo; echo '[user]'; echo 'default=$lin'; } > /etc/wsl.conf"
     Ok "ユーザーと /etc/wsl.conf を設定"
+    $WslUser = $lin   # setup.sh はこのユーザーで回す (root では回さない)
 
     # wsl.conf は起動時にしか読まれないので、ここで一度落とす。
     Invoke-WslCli --terminate $Distro | Out-Null
 } else {
     Say "既存ディストロ '$Distro' を使用"
+    # setup.sh を回す非 root ユーザーを既定ユーザーから取る。
+    $WslUser = (Invoke-Wsl -d $Distro -- whoami | Select-Object -First 1)
     # 既存ディストロで systemd が無効だと Nix の導入が失敗する。有効にするには
     # /etc/wsl.conf の書き換え + ディストロ再起動が要るので、勝手にやらず断る。
     $hasSystemd = $false
@@ -329,6 +332,13 @@ Say "WSL 内のセットアップを開始 (Nix → home-manager)"
 Write-Host "    初回は 5〜15 分かかります。" -ForegroundColor DarkGray
 Write-Host ""
 
+# setup.sh は root では動かない (自分でガードして止まる)。既定ユーザーが root の
+# ディストロ (前回途中で壊れた ncc など) を掴んでいたら、ここで分かりやすく止める。
+$WslUser = ("$WslUser").Trim()
+if (-not $WslUser -or $WslUser -eq 'root') {
+    Fail "ディストロ '$Distro' の既定ユーザーが root です (未設定/壊れている可能性)。`n    一度消してから [1] 授業専用を新しく作る を選び直してください:`n        wsl --unregister $Distro"
+}
+
 # 展開済みの setup.sh を /mnt/c/... 経由で直接叩く。これなら WSL 側に git も
 # curl も無くてよい (setup.sh 自身が apt でそれらを入れてから clone する)。
 $setupLin = ConvertTo-WslPath (Join-Path $src.FullName 'scripts\setup.sh')
@@ -338,7 +348,8 @@ $setupArgs = @('bash', $setupLin, '--tarball', $TarballUrl)
 if ($GitName)  { $setupArgs += @('--git-name', $GitName) }
 if ($GitEmail) { $setupArgs += @('--git-email', $GitEmail) }
 
-Invoke-Wsl -d $Distro -- @setupArgs
+# 明示的に非 root ユーザーで実行する (既定ユーザー任せにしない)。
+Invoke-Wsl -d $Distro -u $WslUser -- @setupArgs
 if ($LASTEXITCODE -ne 0) { Fail "WSL 内のセットアップに失敗しました" }
 
 # ---------------------------------------------------------------------------
