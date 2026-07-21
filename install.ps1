@@ -264,8 +264,12 @@ if ($existing -notcontains $Distro) {
 
     # systemd=true: Nix (Determinate installer) が nix-daemon を登録するのに要る。
     # default=<user>: 以後 `wsl -d ncc` が root ではなく学生として開く。
-    $conf = "[boot]`nsystemd=true`n`n[user]`ndefault=$lin`n"
-    $conf | Invoke-Wsl -d $Distro -u root -- tee /etc/wsl.conf | Out-Null
+    #
+    # stdin パイプ ($conf | Invoke-Wsl ... tee) は使わない。Invoke-Wsl 関数越しだと
+    # PowerShell のパイプ入力が wsl.exe の stdin に渡らず、tee が入力待ちで固まる。
+    # echo を並べて bash -c で書く (バックスラッシュを含めない = wsl.exe の引数
+    # リレーが \ を食う問題も同時に避ける)。
+    Invoke-Wsl -d $Distro -u root -- bash -c "{ echo '[boot]'; echo 'systemd=true'; echo; echo '[user]'; echo 'default=$lin'; } > /etc/wsl.conf"
     Ok "ユーザーと /etc/wsl.conf を設定"
 
     # wsl.conf は起動時にしか読まれないので、ここで一度落とす。
@@ -287,8 +291,9 @@ if ($existing -notcontains $Distro) {
         $a = Read-Host "    追記してよいですか? [y/N]"
         if ($a -ne 'y' -and $a -ne 'Y') { Fail "systemd が無いと続行できません" }
         # 既存の wsl.conf を壊さないよう、退避してから追記する。
+        # printf '\n...' は使わない (wsl.exe の引数リレーが \ を食う恐れ)。echo で追記。
         Invoke-Wsl -d $Distro -u root -- bash -c `
-            "test -f /etc/wsl.conf && cp /etc/wsl.conf /etc/wsl.conf.ncc-backup; printf '\n[boot]\nsystemd=true\n' >> /etc/wsl.conf"
+            "test -f /etc/wsl.conf && cp /etc/wsl.conf /etc/wsl.conf.ncc-backup; { echo; echo '[boot]'; echo 'systemd=true'; } >> /etc/wsl.conf"
         $script:manifest = Add-NccEntry $script:manifest @{
             type = 'wslconf'; distro = $Distro; backup = '/etc/wsl.conf.ncc-backup'
         } @('distro')
