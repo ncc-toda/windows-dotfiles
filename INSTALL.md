@@ -47,11 +47,14 @@
 
 ## 設定を更新する
 
-配布側が設定を更新したら、WezTerm で:
+配布側が設定（dotfiles の中身）を更新したら、WezTerm で:
 
 ```sh
-cd ~/dotfiles && just switch
+cd ~/dotfiles && just upgrade
 ```
+
+`just upgrade` は最新の dotfiles を取り直して適用します（git は使いません）。
+手元で `~/dotfiles` を編集しただけの反映なら `just switch` で足ります。
 
 ## 全部消す（元に戻す）
 

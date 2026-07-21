@@ -4,5 +4,5 @@ result-*
 .claude/
 
 # マシン固有の設定 (ユーザー名 / git identity)。scripts/setup.sh が生成する。
-# 追跡はしないが、flake が読めるよう setup.sh が `git add -f` で index に載せる。
+# 追跡しない。flake は path: 指定で参照するので、追跡外でもその場の値が読まれる。
 local.nix

@@ -4,9 +4,9 @@
 # 書く必要はない。後から git の名前/メールを変えたいときは local.nix を直接編集し、
 # `just switch` で反映する。
 #
-# 注意: local.nix は .gitignore 済みだが、Nix の flake は「git が追跡している
-# ファイル」しか見ないため、setup.sh が `git add -f local.nix` で index に載せて
-# いる。消すと flake の評価が失敗する。
+# 注意: local.nix は .gitignore 済み。just / setup.sh は flake を path: 指定で
+# 参照するので、git 追跡の有無に関係なくその場の local.nix が読まれる。消すと
+# flake の評価が失敗する。
 {
   # WSL 内のログインユーザー。`id -un` の値と一致していること。
   username = "student";

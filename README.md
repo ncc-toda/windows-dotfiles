@@ -45,10 +45,10 @@ local.nix          (git 管理外・setup.sh が生成) このマシンの usern
 modules/
   shell.nix        bash + starship + fzf + zoxide + direnv + ble.sh + aliases
   cli.nix          modern CLI tools (eza, bat, ripgrep, fd, jq, ...)
-  git.nix          git identity (local.nix 参照) + delta + aliases
+  git.nix          git identity (local.nix 参照。最小構成)
   windows.nix      (WSL のみ) just switch 時に Windows 側 bootstrap.ps1 を呼ぶ
 scripts/
-  setup.sh         WSL 内側: Nix 導入 → clone → local.nix 生成 → home-manager
+  setup.sh         WSL 内側: Nix 導入 → tarball 取得(curl) → local.nix 生成 → home-manager
   teardown.sh      WSL 内側の後始末 (既存ディストロに入れた場合の uninstall で使用)
 windows/
   wezterm.lua      WezTerm 設定 (Mac/Windows 共用)
@@ -56,15 +56,25 @@ windows/
   ime-shift.ahk    左Shift=英数 / 右Shift=かな (IMM32 API 経由。IME 非依存)
   bootstrap.ps1    Windows 側の配置 + フォント + AHK 登録 (manifest 記録つき)
   state.ps1        manifest の読み書き (bootstrap/install/uninstall が共用)
-justfile           `just switch` / `just build` / `just update`
+justfile           `just switch` / `just build` / `just update` / `just upgrade`
 ```
 
 ## マシン固有設定（local.nix）
 
 ユーザー名と git の名前/メールは人ごとに違うので `local.nix` に分離してある
-（`.gitignore` 済み）。`scripts/setup.sh` が `local.nix.example` を雛形に生成し、
-flake が読めるよう `git add -f local.nix` で index に載せる（flake は git 追跡下の
-ファイルしか見ないため）。後から変えるときは `local.nix` を直接編集して `just switch`。
+（`.gitignore` 済み）。`scripts/setup.sh` が `local.nix.example` を雛形に生成する。
+後から変えるときは `local.nix` を直接編集して `just switch`。
+
+flake の参照は `path:` 指定（justfile / setup.sh とも）。`path:` は対象を git
+リポジトリとして扱わず中の全ファイルをそのまま読むので、**追跡外の `local.nix` も
+そのまま評価対象になる**（`git add -f` のような小細工は不要）。学生の `~/dotfiles`
+は tarball 展開の非 git ディレクトリ、開発者のは git リポジトリだが、`path:` なら
+どちらでも同じに動く。逆に `.#…`（path: 無し）で評価すると git リポジトリでは
+追跡外の `local.nix` が見えず失敗する。
+
+学生の取得は **git clone せず tarball を curl で展開**する。よって WSL 側に git は
+不要（`curl` / `xz` / `tar` のみ。これらは Nix 導入にも要る）。dotfiles 自体の更新は
+`just upgrade`（tarball 取り直し）。`just update` は nix inputs の更新。
 
 ## 開発・保守
 
@@ -96,7 +106,8 @@ just --list         # 全レシピ
 - **Nix が既に入っている**: `setup.sh` は既存の Nix を壊さず再利用する。
 - **既存 `.backup` の衝突**: `setup.sh` は home-manager が失敗する前に古い `*.backup`
   を日時付きフォルダへ退避する。
-- **素の Ubuntu に git/curl が無い**: `setup.sh` が Nix より前に apt でそれだけ入れる。
+- **素の Ubuntu に curl が無い**: `setup.sh` が Nix より前に apt で `curl`/`xz`/`tar`
+  だけ入れる（git は使わない）。
 - **学校ネットワークが GitHub を塞ぐ**: フォント取得等は失敗しても警告のみでシェル
   自体は動く。取得は Windows 側で済ませ、WSL 側にツールが無くても進む設計。
 - **PowerShell 5.1 + 日本語**: 配布 `.ps1` は UTF-8 **BOM 付き**（`.gitattributes` で

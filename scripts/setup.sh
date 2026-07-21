@@ -9,7 +9,11 @@
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
-REPO_URL="${NCC_REPO_URL:-https://github.com/ncc-toda/windows-dotfiles.git}"
+# dotfiles は git clone せず、tarball を curl で取って展開する (git 不要)。
+# nix flake は「git リポジトリでないディレクトリ」なら中の全ファイルを追跡状態に
+# 関係なく読むので、その場に置いた local.nix をそのまま評価でき、`git add -f` の
+# ような小細工が要らない。ビルド/switch は path: 指定でこのディレクトリを指す。
+REPO_TARBALL="${NCC_REPO_TARBALL:-https://github.com/ncc-toda/windows-dotfiles/archive/refs/heads/main.tar.gz}"
 REPO_DIR="$HOME/dotfiles"
 BACKUP_DIR="$HOME/.ncc-dotfiles/backup/$(date +%Y%m%d-%H%M%S)"
 STATE_FILE="$HOME/.ncc-dotfiles/state"
@@ -22,7 +26,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --git-name)   GIT_NAME="${2:-}"; shift 2 ;;
     --git-email)  GIT_EMAIL="${2:-}"; shift 2 ;;
-    --repo)       REPO_URL="${2:-}"; shift 2 ;;
+    --tarball)    REPO_TARBALL="${2:-}"; shift 2 ;;
     --set-default-shell)    SET_DEFAULT_SHELL="yes"; shift ;;
     --no-set-default-shell) SET_DEFAULT_SHELL="no";  shift ;;
     *) echo "不明な引数: $1" >&2; exit 2 ;;
@@ -43,16 +47,17 @@ USERNAME="$(id -un)"
 say "ユーザー: $USERNAME ($HOME)"
 
 # --- 1. 素の Ubuntu に無い前提ツールを入れる -------------------------------
-# 新規ディストロには git も curl も無い。Nix より前に要る物だけ apt で入れる。
+# 新規ディストロには curl も無い。Nix とその取得に要る物だけ apt で入れる。
+# git は使わない (dotfiles は tarball 取得、flake は path: 指定)。
 # (これ以降のツールはすべて Nix が入れるので、apt に触るのはここだけ)
 need_apt=()
-for c in git curl xz; do
+for c in curl xz tar; do
   command -v "$c" >/dev/null 2>&1 || need_apt+=("$c")
 done
 if [ ${#need_apt[@]} -gt 0 ]; then
-  say "前提ツールを導入 (git / curl / xz-utils)"
+  say "前提ツールを導入 (curl / xz-utils / tar)"
   sudo apt-get update -qq
-  sudo apt-get install -y -qq git curl ca-certificates xz-utils
+  sudo apt-get install -y -qq curl ca-certificates xz-utils tar
   ok "導入しました"
 else
   ok "前提ツールは導入済み"
@@ -92,21 +97,20 @@ if ! command -v nix >/dev/null 2>&1; then
 fi
 command -v nix >/dev/null 2>&1 || die "nix が PATH にありません。WSL を開き直して再実行してください"
 
-# --- 3. repo ----------------------------------------------------------------
-if [ -d "$REPO_DIR/.git" ]; then
-  say "既存の $REPO_DIR を更新"
-  # 学生が local.nix 以外をいじっていた場合に pull を失敗させない。
-  git -C "$REPO_DIR" pull --ff-only || warn "pull できませんでした (ローカルの変更あり?)。今ある内容で続行します"
-else
-  say "$REPO_DIR に clone"
-  git clone "$REPO_URL" "$REPO_DIR" \
-    || die "clone に失敗しました (ネットワーク / URL: $REPO_URL)"
+# --- 3. dotfiles を取得 (curl + tar。clone しない) -------------------------
+# tarball を展開して $REPO_DIR に配置する。--strip-components=1 で tarball の
+# トップ (windows-dotfiles-main/) を剥がして中身を直接置く。tarball に local.nix
+# は入っていないので、再実行 (更新) でも既存の local.nix は残る。
+say "dotfiles を取得 (curl + tar)"
+mkdir -p "$REPO_DIR"
+if ! curl -fsSL "$REPO_TARBALL" | tar xz --strip-components=1 -C "$REPO_DIR"; then
+  die "取得に失敗しました (ネットワーク / URL: $REPO_TARBALL)"
 fi
-ok "repo: $REPO_DIR"
+ok "dotfiles: $REPO_DIR"
 
 # --- 4. local.nix -----------------------------------------------------------
-# マシン固有の設定。flake は git 管理下のファイルしか見ないので `git add -f` で
-# index に載せる (.gitignore 済みなので push で流出することはない)。
+# マシン固有の設定。$REPO_DIR は git リポジトリではないので、その場に置くだけで
+# flake (path: 指定) が読む。staging 等の小細工は不要。
 #
 # username / homeDirectory は必ず「今のログインユーザーの実測値」で書く。
 # ここを既存ファイル任せにすると、配布リポジトリに誤って先生の local.nix
@@ -152,7 +156,6 @@ cat > "$REPO_DIR/local.nix" <<EOF
 }
 EOF
 ok "local.nix を生成 ($USERNAME / $id_note)"
-git -C "$REPO_DIR" add -f local.nix
 
 # --- 5. 既存 dotfiles の退避 -----------------------------------------------
 # home-manager は `-b backup` で衝突した既存ファイルを *.backup へ逃がすが、
@@ -179,7 +182,10 @@ say "home-manager を適用 (初回は 5〜15 分かかります)"
 # 直接ビルドして起動する。`nix run home-manager/master` と違い、この repo の
 # flake.lock が指す home-manager がそのまま使われるため版ズレが起きない。
 # 適用後は programs.home-manager.enable により `home-manager` が PATH に入る。
-out="$(nix build "$REPO_DIR#homeConfigurations.$USERNAME.activationPackage" \
+#
+# path: 指定にするのは $REPO_DIR が git リポジトリでないため。これで local.nix
+# を含む全ファイルがそのまま評価対象になる (git 追跡の有無を問わない)。
+out="$(nix build "path:$REPO_DIR#homeConfigurations.$USERNAME.activationPackage" \
         --no-link --print-out-paths)" \
   || die "ビルドに失敗しました"
 HOME_MANAGER_BACKUP_EXT=backup "$out/activate" \

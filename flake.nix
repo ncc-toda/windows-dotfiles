@@ -17,8 +17,12 @@
       pkgs = nixpkgs.legacyPackages.${system};
 
       # マシン固有の設定 (ユーザー名 / git identity) は local.nix に分離する。
-      # scripts/setup.sh が local.nix.example から生成し、`git add -f` で index に
-      # 載せる (flake は git が追跡しているファイルしか見ないため)。
+      # scripts/setup.sh が local.nix.example を雛形に生成する。
+      #
+      # local.nix は .gitignore 済み。just / setup.sh は flake を path: 指定で参照
+      # するため、git 追跡の有無に関係なくその場の local.nix が読まれる (`git add -f`
+      # のような小細工は不要)。逆に `.#...` (path: 無し) で git 経由に評価すると、
+      # git リポジトリでは追跡外の local.nix が見えずここに落ちる。
       local =
         if builtins.pathExists ./local.nix then
           import ./local.nix
@@ -29,9 +33,9 @@
             初回セットアップなら scripts/setup.sh を実行してください:
               ~/dotfiles/scripts/setup.sh
 
-            local.nix はあるのにこのエラーが出る場合、git の index に載っていません
-            (flake は git 管理下のファイルしか見ません)。次で解決します:
-              git -C ~/dotfiles add -f local.nix
+            既にあるのにこのエラーが出る場合、flake を git 経由 (.#...) で評価して
+            います。path: を付けて参照してください (just は既にそうしています):
+              nix build path:~/dotfiles#homeConfigurations.$(id -un).activationPackage
           '';
     in
     {

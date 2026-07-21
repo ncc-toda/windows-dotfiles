@@ -64,7 +64,9 @@ if [ -f "$STATE_FILE" ]; then
 fi
 
 # --- 3. repo -------------------------------------------------------------
-if [ -d "$HOME/dotfiles/.git" ]; then
+# ~/dotfiles は非 git ディレクトリ (tarball 展開)。flake.nix があれば自分の物と
+# みなして消す。
+if [ -f "$HOME/dotfiles/flake.nix" ]; then
   say "\$HOME/dotfiles を削除"
   rm -rf "$HOME/dotfiles" && ok "削除しました"
 fi

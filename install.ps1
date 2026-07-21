@@ -28,8 +28,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$RepoUrl  = 'https://github.com/ncc-toda/windows-dotfiles.git'
-$ZipUrl   = 'https://github.com/ncc-toda/windows-dotfiles/archive/refs/heads/main.zip'
+# Windows 側スクリプト (state.ps1 / setup.sh) を取る ZIP と、WSL 側 dotfiles を
+# 取る tar.gz。どちらも同じ公開リポジトリの同じブランチ。
+$ZipUrl     = 'https://github.com/ncc-toda/windows-dotfiles/archive/refs/heads/main.zip'
+$TarballUrl = 'https://github.com/ncc-toda/windows-dotfiles/archive/refs/heads/main.tar.gz'
 $NewDistroImage = 'Ubuntu-24.04'
 
 function Say($m)   { Write-Host "==> $m" -ForegroundColor Cyan }
@@ -295,7 +297,7 @@ Write-Host ""
 $setupLin = ConvertTo-WslPath (Join-Path $src.FullName 'scripts\setup.sh')
 
 # $args は PowerShell の自動変数なので使わない。
-$setupArgs = @('bash', $setupLin, '--repo', $RepoUrl)
+$setupArgs = @('bash', $setupLin, '--tarball', $TarballUrl)
 if ($GitName)  { $setupArgs += @('--git-name', $GitName) }
 if ($GitEmail) { $setupArgs += @('--git-email', $GitEmail) }
 
