@@ -37,7 +37,19 @@ function Say($m)  { Write-Host "==> $m" -ForegroundColor Cyan }
 function Ok($m)   { Write-Host "    OK: $m" -ForegroundColor Green }
 function Warn($m) { Write-Host "    警告: $m" -ForegroundColor Yellow }
 
+# Linux コマンド用 (UTF-8)。wsl -d X -- wslpath/bash ... の出力はそのまま UTF-8。
+# 一律 UTF-16 で読むと wslpath の ASCII 出力が CJK に化けてパスが壊れる。
 function Invoke-Wsl {
+    $prev = [Console]::OutputEncoding
+    try {
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+        & wsl.exe @args
+    } finally {
+        [Console]::OutputEncoding = $prev
+    }
+}
+# WSL 組込コマンド用 (UTF-16LE)。-l / --unregister / --terminate ...
+function Invoke-WslCli {
     $prev = [Console]::OutputEncoding
     try {
         [Console]::OutputEncoding = [System.Text.Encoding]::Unicode
@@ -125,7 +137,7 @@ foreach ($e in $entries | Where-Object { $_.type -eq 'file' }) {
 $wslEntry = $entries | Where-Object { $_.type -eq 'wsl' -and $_.createdByUs } | Select-Object -First 1
 if ($wslEntry -and -not $KeepDistro) {
     Say "授業専用ディストロ '$($wslEntry.distro)' を削除"
-    Invoke-Wsl --unregister $wslEntry.distro
+    Invoke-WslCli --unregister $wslEntry.distro
     if ($LASTEXITCODE -eq 0) { Ok "削除しました (中身ごと消えました)" }
     else { Warn "unregister に失敗しました" }
 } else {
@@ -135,7 +147,7 @@ if ($wslEntry -and -not $KeepDistro) {
     }
     if (-not $distro) {
         # 記録に無い = 既存ディストロだが distro 名を残していない旧経路。既定へ。
-        $distro = (@(Invoke-Wsl -l -q | ForEach-Object { $_.Trim() } | Where-Object { $_ }))[0]
+        $distro = (@(Invoke-WslCli -l -q | ForEach-Object { $_.Trim() } | Where-Object { $_ }))[0]
     }
     if ($distro) {
         Say "ディストロ '$distro' の WSL 側を後始末"

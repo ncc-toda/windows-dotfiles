@@ -52,10 +52,25 @@ function Warn($m)  { Write-Host "    警告: $m" -ForegroundColor Yellow }
 # 残り、原因が読める。
 function Fail($m)  { Write-Host "    エラー: $m" -ForegroundColor Red; throw $m }
 
-# wsl.exe の標準出力は UTF-16LE。PowerShell の既定エンコーディングのままだと
-# 文字化けして -match や比較が全部外れる (ディストロ一覧が空に見える等)。
-# wsl.exe を呼ぶ間だけ Unicode に切り替える。
+# wsl.exe の出力エンコーディングは呼ぶ対象で違う:
+#  - WSL 組込コマンド (--version / -l / --install 等) は UTF-16LE を出す。
+#  - ディストロ内の Linux コマンド (wsl -d X -- cmd) はその出力 (通常 UTF-8) を
+#    そのまま素通しする。
+# これを一律 UTF-16 で読むと、wslpath 等の ASCII 出力が 2 バイトずつ CJK に化け、
+# 壊れたパスを bash に渡して "No such file or directory" になる。用途で分ける。
+
+# Linux コマンド用 (UTF-8)。wsl -d X -- wslpath/bash/useradd/passwd/tee ...
 function Invoke-Wsl {
+    $prev = [Console]::OutputEncoding
+    try {
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+        & wsl.exe @args
+    } finally {
+        [Console]::OutputEncoding = $prev
+    }
+}
+# WSL 組込コマンド用 (UTF-16LE)。--version / -l / --install / --terminate ...
+function Invoke-WslCli {
     $prev = [Console]::OutputEncoding
     try {
         [Console]::OutputEncoding = [System.Text.Encoding]::Unicode
@@ -174,16 +189,16 @@ Say "WSL ディストロを選択"
 
 # `wsl --install <image> --name <name>` は WSL 2.4.4 以降でのみ使える。
 # それ未満だと「専用ディストロを作る」が黙って失敗するので先に上げておく。
-$verText = (Invoke-Wsl --version) -join "`n"
+$verText = (Invoke-WslCli --version) -join "`n"
 $wslVer = if ($verText -match 'WSL[^\d]*(\d+)\.(\d+)\.(\d+)') {
     [version]"$($Matches[1]).$($Matches[2]).$($Matches[3])"
 } else { $null }
 if (-not $wslVer -or $wslVer -lt [version]'2.4.4') {
     Write-Host "    WSL を更新しています (専用ディストロの作成に 2.4.4 以降が必要)..."
-    Invoke-Wsl --update | Out-Null
+    Invoke-WslCli --update | Out-Null
 }
 
-$existing = @(Invoke-Wsl -l -q | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+$existing = @(Invoke-WslCli -l -q | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 
 if (-not $Distro) {
     Write-Host ""
@@ -242,7 +257,7 @@ if ($existing -notcontains $Distro) {
     Write-Host "    ダウンロードに数分かかります..."
     # --no-launch: 対話的な初期ユーザー作成 (OOBE) を出さずに作る。
     # ユーザーはこの後こちらで作って /etc/wsl.conf の default に設定する。
-    Invoke-Wsl --install $NewDistroImage --name $Distro --no-launch
+    Invoke-WslCli --install $NewDistroImage --name $Distro --no-launch
     if ($LASTEXITCODE -ne 0) { Fail "ディストロの作成に失敗しました" }
     $script:manifest = Add-NccEntry $script:manifest @{
         type = 'wsl'; distro = $Distro; createdByUs = $true
@@ -276,7 +291,7 @@ if ($existing -notcontains $Distro) {
     Ok "ユーザーと /etc/wsl.conf を設定"
 
     # wsl.conf は起動時にしか読まれないので、ここで一度落とす。
-    Invoke-Wsl --terminate $Distro | Out-Null
+    Invoke-WslCli --terminate $Distro | Out-Null
 } else {
     Say "既存ディストロ '$Distro' を使用"
     # 既存ディストロで systemd が無効だと Nix の導入が失敗する。有効にするには
@@ -300,7 +315,7 @@ if ($existing -notcontains $Distro) {
         $script:manifest = Add-NccEntry $script:manifest @{
             type = 'wslconf'; distro = $Distro; backup = '/etc/wsl.conf.ncc-backup'
         } @('distro')
-        Invoke-Wsl --terminate $Distro | Out-Null
+        Invoke-WslCli --terminate $Distro | Out-Null
         Ok "有効にしました (ディストロを再起動しました)"
     }
 }
