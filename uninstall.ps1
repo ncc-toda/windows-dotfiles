@@ -17,13 +17,16 @@
         # ネットから直接
         irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.0/uninstall.ps1 | iex
 #>
-[CmdletBinding()]
-param(
-    [switch]$RemoveNix,      # WSL 内の Nix も消す (既定は残す)
-    [switch]$KeepDistro,     # 授業専用ディストロを消さずに残す
-    [switch]$KeepApps,       # winget で入れた WezTerm/AHK を消さずに残す
-    [switch]$Yes
-)
+
+# irm|iex は param() を扱えない (install.ps1 と同じ理由)。引数は環境変数で受ける。
+#   $env:NCC_REMOVE_NIX=1   WSL 内の Nix も消す (既定は残す)
+#   $env:NCC_KEEP_DISTRO=1  授業専用ディストロを消さずに残す
+#   $env:NCC_KEEP_APPS=1    winget で入れた WezTerm/AHK を消さずに残す
+#   $env:NCC_YES=1          確認プロンプトを飛ばす
+$RemoveNix  = [bool]$env:NCC_REMOVE_NIX
+$KeepDistro = [bool]$env:NCC_KEEP_DISTRO
+$KeepApps   = [bool]$env:NCC_KEEP_APPS
+$Yes        = [bool]$env:NCC_YES
 
 $ErrorActionPreference = 'Stop'
 # 配布タグ (install.ps1 と揃える)。ネットから state.ps1 を拾う際の ref。

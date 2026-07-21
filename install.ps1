@@ -18,14 +18,18 @@
 
     WSL 自体は導入済みであることを前提にしている。
 #>
-[CmdletBinding()]
-param(
-    # 対話を省略したいとき用 (教室で一斉に流す場合など)。
-    [string]$Distro,
-    [string]$GitName,
-    [string]$GitEmail,
-    [switch]$Yes
-)
+
+# 注意: このスクリプトは `irm URL | iex` で実行される。iex は内容を「スクリプト
+# 本体」ではなく「文の並び」として評価するため、param() / [CmdletBinding()] を
+# 先頭に置くと構文エラーになる (予期しない属性 'CmdletBinding')。よって引数は
+# param() ではなく環境変数で受ける。通常は対話で使うので、どれも未設定でよい。
+#   $env:NCC_DISTRO    使う/作る WSL ディストロ名を固定 (未設定なら対話選択)
+#   $env:NCC_GIT_NAME / $env:NCC_GIT_EMAIL   git 身元 (未設定なら対話。任意)
+#   $env:NCC_YES = 1   最初の確認プロンプトを飛ばす (教室で一斉に流す場合など)
+$Distro   = $env:NCC_DISTRO
+$GitName  = $env:NCC_GIT_NAME
+$GitEmail = $env:NCC_GIT_EMAIL
+$Yes      = [bool]$env:NCC_YES
 
 $ErrorActionPreference = 'Stop'
 # 配布は固定タグ (動作確認済みスナップショット) から取る。ここを 1 か所変えれば、
