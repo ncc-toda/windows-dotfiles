@@ -15,7 +15,7 @@
         # 展開済みの場合
         .\uninstall.ps1
         # ネットから直接
-        irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/main/uninstall.ps1 | iex
+        irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.0/uninstall.ps1 | iex
 #>
 [CmdletBinding()]
 param(
@@ -26,6 +26,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# 配布タグ (install.ps1 と揃える)。ネットから state.ps1 を拾う際の ref。
+$Ref = 'v1.0'
 
 function Say($m)  { Write-Host "==> $m" -ForegroundColor Cyan }
 function Ok($m)   { Write-Host "    OK: $m" -ForegroundColor Green }
@@ -52,7 +54,7 @@ if (-not $statePs1 -or -not (Test-Path $statePs1)) {
     $tmp = Join-Path $env:TEMP 'ncc-state.ps1'
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     Invoke-WebRequest -UseBasicParsing `
-        -Uri 'https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/main/windows/state.ps1' `
+        -Uri "https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/$Ref/windows/state.ps1" `
         -OutFile $tmp
     $statePs1 = $tmp
 }

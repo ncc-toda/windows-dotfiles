@@ -14,7 +14,7 @@
 2. 次の1行を貼り付けて Enter:
 
    ```powershell
-   irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/main/install.ps1 | iex
+   irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.0/install.ps1 | iex
    ```
 
 3. 最初に「何を変更するか」が表示されます。読んで `y` で続行。
@@ -61,7 +61,7 @@ cd ~/dotfiles && just upgrade
 PowerShell で:
 
 ```powershell
-irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/main/uninstall.ps1 | iex
+irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.0/uninstall.ps1 | iex
 ```
 
 - 変更はすべて記録されているので、**元からあったファイルは復元**されます。

@@ -10,10 +10,29 @@
 PowerShell で1行:
 
 ```powershell
-irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.0/install.ps1 | iex
 ```
 
 詳しい手順・つまずき・アンインストールは **[INSTALL.md](INSTALL.md)** を参照。
+
+## 配布はタグ (リリース) から
+
+学生が叩く URL は `main` ではなく**固定タグ `v1.0`** を指す。`main` は「触った瞬間に
+全学生のマシンで実行される生きた配線」なので、いつ導入しても同じ検証済みスナップ
+ショットを踏むよう、配布はタグに固定してある。`install.ps1` / `uninstall.ps1` 内の
+`$Ref` も同じタグを指すので、入口スクリプトも中身 (dotfiles・state.ps1) も同一 ref に
+揃う。
+
+新版を出す手順:
+
+1. `main` で変更 → 実機で確認
+2. 入口の参照を新タグに更新: `install.ps1` / `uninstall.ps1` の `$Ref`、README /
+   INSTALL の URL を `vX.Y` に
+3. コミットして `git tag -a vX.Y -m ... && git push origin vX.Y`
+4. 学生へ新しい URL を周知
+
+`just upgrade` は `main` (最新の開発版) を取り込むので、検証済みの版だけ使いたい間は
+使わない。安定して更新したいときは新しいタグの `install.ps1` を叩き直す。
 
 ## 配布の設計（どうやって「壊さない」か）
 

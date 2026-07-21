@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     PowerShell で:
-        irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/main/install.ps1 | iex
+        irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.0/install.ps1 | iex
 
     やること:
       1. 何を変更するかを提示して同意を取る
@@ -28,10 +28,13 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-# Windows 側スクリプト (state.ps1 / setup.sh) を取る ZIP と、WSL 側 dotfiles を
-# 取る tar.gz。どちらも同じ公開リポジトリの同じブランチ。
-$ZipUrl     = 'https://github.com/ncc-toda/windows-dotfiles/archive/refs/heads/main.zip'
-$TarballUrl = 'https://github.com/ncc-toda/windows-dotfiles/archive/refs/heads/main.tar.gz'
+# 配布は固定タグ (動作確認済みスナップショット) から取る。ここを 1 か所変えれば、
+# Windows 側スクリプト (state.ps1 / setup.sh) の ZIP も、WSL 側 dotfiles の tar.gz
+# も、setup.sh に渡す取得先も、すべて同じ ref に揃う。開発版を試すなら 'main'。
+# archive/<ref>.(zip|tar.gz) の短縮形はタグ/ブランチ/コミットのいずれでも効く。
+$Ref = 'v1.0'
+$ZipUrl     = "https://github.com/ncc-toda/windows-dotfiles/archive/$Ref.zip"
+$TarballUrl = "https://github.com/ncc-toda/windows-dotfiles/archive/$Ref.tar.gz"
 $NewDistroImage = 'Ubuntu-24.04'
 
 function Say($m)   { Write-Host "==> $m" -ForegroundColor Cyan }
