@@ -47,7 +47,10 @@ $NewDistroImage = 'Ubuntu-24.04'
 function Say($m)   { Write-Host "==> $m" -ForegroundColor Cyan }
 function Ok($m)    { Write-Host "    OK: $m" -ForegroundColor Green }
 function Warn($m)  { Write-Host "    警告: $m" -ForegroundColor Yellow }
-function Fail($m)  { Write-Host "    エラー: $m" -ForegroundColor Red; exit 1 }
+# 注意: irm|iex で実行中に exit を呼ぶと PowerShell セッションごと終了し、ウィンドウ
+# が閉じてエラーメッセージも見えなくなる。throw なら script は止まるがウィンドウは
+# 残り、原因が読める。
+function Fail($m)  { Write-Host "    エラー: $m" -ForegroundColor Red; throw $m }
 
 # wsl.exe の標準出力は UTF-16LE。PowerShell の既定エンコーディングのままだと
 # 文字化けして -match や比較が全部外れる (ディストロ一覧が空に見える等)。
@@ -97,7 +100,7 @@ Write-Host "  既存のファイルは消さずに退避します。" -Foregroun
 Write-Host ""
 if (-not $Yes) {
     $ans = Read-Host "  続けますか? [y/N]"
-    if ($ans -ne 'y' -and $ans -ne 'Y') { Write-Host "  中止しました。"; exit 0 }
+    if ($ans -ne 'y' -and $ans -ne 'Y') { Write-Host "  中止しました。"; return }
 }
 
 # ---------------------------------------------------------------------------

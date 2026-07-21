@@ -84,6 +84,20 @@ else
         [boot]
         systemd=true"
   fi
+
+  # ディストロを起動した直後は systemd がまだ 'starting' のことがある。その状態で
+  # Determinate installer が nix-daemon を systemd 登録すると失敗しうるので、
+  # running/degraded になるまで少し待つ (最大 ~40 秒)。
+  if [ -d /run/systemd/system ]; then
+    for _i in $(seq 1 40); do
+      state=$(systemctl is-system-running 2>/dev/null || true)
+      case "$state" in
+        running|degraded) break ;;
+      esac
+      sleep 1
+    done
+    say "systemd 状態: ${state:-unknown}"
+  fi
   curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix \
     | sh -s -- install --no-confirm \
     || die "Nix の導入に失敗しました (学校のネットワークが塞いでいる可能性があります)"

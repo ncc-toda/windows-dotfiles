@@ -67,7 +67,7 @@ if (-not $statePs1 -or -not (Test-Path $statePs1)) {
 
 if (-not (Test-Path $script:NccManifest)) {
     Warn "変更の記録 ($script:NccManifest) がありません。取り消す対象がありません。"
-    exit 0
+    return   # irm|iex では exit だとウィンドウごと閉じるため return で止める
 }
 $manifest = Get-NccManifest
 $entries = @($manifest.entries)
@@ -82,7 +82,7 @@ if ($KeepDistro)      { Write-Host "    (授業専用ディストロは残しま
 Write-Host ""
 if (-not $Yes) {
     $ans = Read-Host "  実行しますか? [y/N]"
-    if ($ans -ne 'y' -and $ans -ne 'Y') { Write-Host "  中止しました。"; exit 0 }
+    if ($ans -ne 'y' -and $ans -ne 'Y') { Write-Host "  中止しました。"; return }
 }
 
 # --- 1. スタートアップ登録を外す (常駐 AHK を止めてから) --------------------
