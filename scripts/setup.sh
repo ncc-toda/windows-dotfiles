@@ -13,7 +13,9 @@ set -euo pipefail
 # nix flake は「git リポジトリでないディレクトリ」なら中の全ファイルを追跡状態に
 # 関係なく読むので、その場に置いた local.nix をそのまま評価でき、`git add -f` の
 # ような小細工が要らない。ビルド/switch は path: 指定でこのディレクトリを指す。
-REPO_TARBALL="${NCC_REPO_TARBALL:-https://github.com/ncc-toda/windows-dotfiles/archive/refs/heads/main.tar.gz}"
+# 既定は配布ブランチ 'release' (= 動作確認済み)。install.ps1 は --tarball で上書きする。
+# 開発版が要るときは NCC_REPO_TARBALL=.../main.tar.gz か --tarball で渡す。
+REPO_TARBALL="${NCC_REPO_TARBALL:-https://github.com/ncc-toda/windows-dotfiles/archive/refs/heads/release.tar.gz}"
 REPO_DIR="$HOME/dotfiles"
 BACKUP_DIR="$HOME/.ncc-dotfiles/backup/$(date +%Y%m%d-%H%M%S)"
 STATE_FILE="$HOME/.ncc-dotfiles/state"

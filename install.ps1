@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     PowerShell で:
-        irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.2/install.ps1 | iex
+        irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/release/install.ps1 | iex
 
     やること:
       1. 何を変更するかを提示して同意を取る
@@ -39,11 +39,12 @@ $ErrorActionPreference = 'Stop'
 # 既定が Restricted のマシンでも、このプロセスに限りスクリプトを動かせるようにする。
 # (GP 強制環境では効かないが、その場合も state.ps1 は文字列経由で読むので大丈夫)
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force -ErrorAction SilentlyContinue
-# 配布は固定タグ (動作確認済みスナップショット) から取る。ここを 1 か所変えれば、
-# Windows 側スクリプト (state.ps1 / setup.sh) の ZIP も、WSL 側 dotfiles の tar.gz
-# も、setup.sh に渡す取得先も、すべて同じ ref に揃う。開発版を試すなら 'main'。
+# 配布は 'release' ブランチ (動作確認済みの最新スナップショット) から取る。ここを
+# 1 か所変えれば、Windows 側スクリプト (state.ps1 / setup.sh) の ZIP も、WSL 側
+# dotfiles の tar.gz も、setup.sh に渡す取得先も、すべて同じ ref に揃う。開発版を
+# 試すなら 'main'、過去の版に固定するなら 'vX.Y' タグ。
 # archive/<ref>.(zip|tar.gz) の短縮形はタグ/ブランチ/コミットのいずれでも効く。
-$Ref = 'v1.2'
+$Ref = 'release'
 $ZipUrl     = "https://github.com/ncc-toda/windows-dotfiles/archive/$Ref.zip"
 $TarballUrl = "https://github.com/ncc-toda/windows-dotfiles/archive/$Ref.tar.gz"
 $NewDistroImage = 'Ubuntu-24.04'

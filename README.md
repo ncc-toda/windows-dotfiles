@@ -10,27 +10,28 @@
 PowerShell で1行:
 
 ```powershell
-irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.2/install.ps1 | iex
+irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/release/install.ps1 | iex
 ```
 
 手順・つまずき・アンインストールは **[INSTALL.md](INSTALL.md)**、使い方の早見表は
 **[CHEATSHEET.md](CHEATSHEET.md)**。
 
-## 配布はタグから
+## 配布は `release` ブランチから
 
-学生が叩く URL は `main` ではなく**固定タグ `v1.2`**。`main` は「触った瞬間に全学生の
-マシンで走る生きた配線」なので、配布は検証済みスナップショットのタグに固定する。
-`install.ps1` / `uninstall.ps1` の `$Ref` も同じタグを指し、入口も中身も同一 ref に揃う。
+学生が踏むのは `main` ではなく**固定ブランチ `release`**。`main` は「触った瞬間に全学生の
+マシンで走る生きた配線」になってしまうので、`main` = 開発/検証、`release` = 検証済みの最新
+スナップショット、と役割を分ける。学生 URL・`$Ref`（`install.ps1` / `uninstall.ps1`）・
+`just upgrade` の取得先はすべて `release` 固定で、**一度決めたら二度と書き換えない**。
 
-新版を出す手順:
+新版を出す（リリース）手順:
 
 1. `main` で変更 → 実機確認
-2. `install.ps1` / `uninstall.ps1` の `$Ref` と README/INSTALL の URL を `vX.Y` に更新
-3. `git tag -a vX.Y -m ... && git push origin vX.Y`
-4. 学生へ新 URL を周知
+2. `main` を `release` へ進める（fast-forward）: `git switch release && git merge --ff-only main && git push`
 
-`just upgrade` は `main`（開発版）を取り込むので、検証済みだけ使う間は使わない（安定更新は
-新タグの `install.ps1` を叩き直す）。
+これだけ。タグ切り・URL 書き換え・学生への再周知は不要（URL が不変なので、学生は同じ
+インストーラを叩き直せば最新の検証版になる）。`just upgrade` も `release` を引くので、
+学生の更新は常に検証済みの版になる。記録やロールバック用に節目で `vX.Y` タグを併用するのは
+任意（`just upgrade v1.2` のように過去の版を指定して取り直せる）。
 
 ## どうやって「壊さない」か
 

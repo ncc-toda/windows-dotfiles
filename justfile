@@ -25,8 +25,11 @@ update:
 
 # Fetch the latest dotfiles content itself (not just inputs) and re-apply.
 # 学生向け: dotfiles の中身の更新は git pull ではなく tarball 取り直しで行う。
-upgrade:
-    curl -fsSL https://github.com/ncc-toda/windows-dotfiles/archive/refs/heads/main.tar.gz \
+# 取得先は配布ブランチ 'release' (= 動作確認済みの最新)。開発版やタグを試すなら
+# `just upgrade main` / `just upgrade v1.2` のように ref を渡す (archive/<ref> の
+# 短縮形はブランチ/タグ/コミットのいずれでも効く)。
+upgrade ref='release':
+    curl -fsSL https://github.com/ncc-toda/windows-dotfiles/archive/{{ref}}.tar.gz \
         | tar xz --strip-components=1 -C ~/dotfiles
     just switch
 
