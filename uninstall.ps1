@@ -15,7 +15,7 @@
         # 展開済みの場合
         .\uninstall.ps1
         # ネットから直接
-        irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.1/uninstall.ps1 | iex
+        irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.2/uninstall.ps1 | iex
 #>
 
 # irm|iex は param() を扱えない (install.ps1 と同じ理由)。引数は環境変数で受ける。
@@ -31,7 +31,7 @@ $Yes        = [bool]$env:NCC_YES
 $ErrorActionPreference = 'Stop'
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force -ErrorAction SilentlyContinue
 # 配布タグ (install.ps1 と揃える)。ネットから state.ps1 を拾う際の ref。
-$Ref = 'v1.1'
+$Ref = 'v1.2'
 
 function Say($m)  { Write-Host "==> $m" -ForegroundColor Cyan }
 function Ok($m)   { Write-Host "    OK: $m" -ForegroundColor Green }
