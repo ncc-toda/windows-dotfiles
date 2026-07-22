@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     PowerShell で:
-        irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.0/install.ps1 | iex
+        irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.1/install.ps1 | iex
 
     やること:
       1. 何を変更するかを提示して同意を取る
@@ -26,10 +26,14 @@
 #   $env:NCC_DISTRO    使う/作る WSL ディストロ名を固定 (未設定なら対話選択)
 #   $env:NCC_GIT_NAME / $env:NCC_GIT_EMAIL   git 身元 (未設定なら対話。任意)
 #   $env:NCC_YES = 1   最初の確認プロンプトを飛ばす (教室で一斉に流す場合など)
-$Distro   = $env:NCC_DISTRO
-$GitName  = $env:NCC_GIT_NAME
-$GitEmail = $env:NCC_GIT_EMAIL
-$Yes      = [bool]$env:NCC_YES
+#   $env:NCC_KEEP_DEFAULT = 1  WSL の「既定ディストロ」を変えない。既定を別ディストロ
+#                              にしている人向け。WezTerm はマーカーファイル経由で授業用
+#                              ディストロを開くので、既定を変えなくても z/starship は効く。
+$Distro      = $env:NCC_DISTRO
+$GitName     = $env:NCC_GIT_NAME
+$GitEmail    = $env:NCC_GIT_EMAIL
+$Yes         = [bool]$env:NCC_YES
+$KeepDefault = [bool]$env:NCC_KEEP_DEFAULT
 
 $ErrorActionPreference = 'Stop'
 # 既定が Restricted のマシンでも、このプロセスに限りスクリプトを動かせるようにする。
@@ -39,7 +43,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force -ErrorAction S
 # Windows 側スクリプト (state.ps1 / setup.sh) の ZIP も、WSL 側 dotfiles の tar.gz
 # も、setup.sh に渡す取得先も、すべて同じ ref に揃う。開発版を試すなら 'main'。
 # archive/<ref>.(zip|tar.gz) の短縮形はタグ/ブランチ/コミットのいずれでも効く。
-$Ref = 'v1.0'
+$Ref = 'v1.1'
 $ZipUrl     = "https://github.com/ncc-toda/windows-dotfiles/archive/$Ref.zip"
 $TarballUrl = "https://github.com/ncc-toda/windows-dotfiles/archive/$Ref.tar.gz"
 $NewDistroImage = 'Ubuntu-24.04'
@@ -351,6 +355,62 @@ if ($GitEmail) { $setupArgs += @('--git-email', $GitEmail) }
 # 明示的に非 root ユーザーで実行する (既定ユーザー任せにしない)。
 Invoke-Wsl -d $Distro -u $WslUser -- @setupArgs
 if ($LASTEXITCODE -ne 0) { Fail "WSL 内のセットアップに失敗しました" }
+
+# ---------------------------------------------------------------------------
+# 5.5 WezTerm が「home-manager を入れたディストロ」で開くようにする
+# ---------------------------------------------------------------------------
+# WezTerm は default_wsl_domains() の先頭ドメイン (= WSL の「既定」ディストロ) で
+# 開く (wezterm.lua の default_domain 参照)。home-manager を入れたのはこの $Distro
+# なので、ここが別ディストロ (未設定の Ubuntu 等) だと WezTerm がそちらで開いてしまい、
+# z も starship も効かず、ペインも今のパスで開かない (OSC 7 が無いので default_cwd='~'
+# に落ちる) ――「3つとも壊れている」ように見える。
+#
+# 対策は 2 段:
+#   (a) マーカーを常に書く。wezterm.lua はこれを読み、既定に関係なく $Distro で開く。
+#       これで「WSL の既定を変えたくない人」でも WezTerm は正しいディストロで開ける。
+#   (b) 既定ディストロも $Distro に寄せる (既定)。CLI で `wsl` を叩いた時も授業用に入る。
+#       別ディストロを既定にしている人は $env:NCC_KEEP_DEFAULT=1 でこれだけ飛ばせる。
+
+# (a) マーカー: %USERPROFILE%\.ncc-wsl-distro に授業用ディストロ名を書く。
+#     wezterm.lua が io.open で読むので BOM 無しで書く (.NET の WriteAllText は既定で
+#     BOM 無し UTF-8)。type=file で台帳に載せ、uninstall のファイル撤去で自動で消える。
+$distroMarker = Join-Path $env:USERPROFILE '.ncc-wsl-distro'
+try {
+    [IO.File]::WriteAllText($distroMarker, $Distro)
+    Ok "WezTerm 用マーカー: $distroMarker → $Distro"
+    $script:manifest = Add-NccEntry $script:manifest @{
+        type = 'file'; path = $distroMarker
+    } @('path')
+} catch {
+    Warn "マーカーの書き込みに失敗しました ($distroMarker): $_"
+}
+
+# (b) 既定ディストロ。NCC_KEEP_DEFAULT なら触らない。
+if ($KeepDefault) {
+    Ok "WSL の既定ディストロは変更しません (NCC_KEEP_DEFAULT)。WezTerm はマーカーで '$Distro' を開きます"
+} else {
+    $prevDefault = (@(Invoke-WslCli -l -q | ForEach-Object { $_.Trim() } | Where-Object { $_ }))[0]
+    if ($prevDefault -ne $Distro) {
+        Say "既定の WSL ディストロを '$Distro' にする (CLI の wsl コマンドもこのディストロで開くように)"
+        Invoke-WslCli --set-default $Distro | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Ok "既定ディストロ: $Distro (元: $prevDefault)"
+            # 元の既定を台帳へ (uninstall で戻す)。type で突き合わせるので、再実行で
+            # 既に $Distro が既定でも、最初に記録した「本当の元の既定」を上書きしない。
+            $script:manifest = Add-NccEntry $script:manifest @{
+                type = 'wsl-default'; distro = $Distro; previous = $prevDefault
+            } @('type')
+        } else {
+            Warn "既定ディストロの変更に失敗しました (手動で: wsl --set-default $Distro)"
+        }
+    } else {
+        Ok "既定の WSL ディストロは既に '$Distro'"
+    }
+}
+
+# ここで足したエントリ (マーカー / 既定変更) を台帳へ書き出す (326 行目の保存は
+# この前に済んでいるため、取りこぼさないよう改めて保存する)。
+Save-NccManifest $manifest
 
 # ---------------------------------------------------------------------------
 # 6. 完了
