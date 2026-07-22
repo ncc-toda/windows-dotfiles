@@ -2,8 +2,6 @@
 {
   # Tools with dedicated home-manager modules get configured here so their
   # settings and shell integration are managed too.
-  programs.bat.enable = true;
-  programs.eza.enable = true;
 
   # lazygit: Git の TUI。`lazygit` で起動。
   programs.lazygit.enable = true;
@@ -24,22 +22,18 @@
 
   # Everything else that just needs to be on PATH.
   home.packages = with pkgs; [
-    ripgrep # rg  - fast grep
-    fd # fd  - fast find
-    jq # JSON processor
-    yq-go # YAML/JSON processor
+    ripgrep # rg  - fast grep (yazi の内容検索にも使う)
+    fd # fd  - fast find (yazi の名前検索にも使う)
     tree
     htop
     btop
-    dust # du replacement
-    duf # df replacement
     curl
     wget
     unzip
     just # コマンドランナー (justfile を実行; make の代替)
 
     # yazi のプレビュー/展開に使う外部ツール
-    # (fd / ripgrep / fzf / jq は既に上で導入済み)
+    # (fd / ripgrep / fzf は既に上で導入済み)
     ffmpeg # 動画サムネイル
     poppler-utils # PDF プレビュー (pdftoppm 等)
     imagemagick # 画像/フォントプレビュー

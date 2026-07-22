@@ -198,9 +198,9 @@ end)
 
 -- resurrect: 定期スナップショット (これを起動時復元が読む) --------------------
 -- save_windows/save_tabs はウィンドウ名・タブ名ごとに別ファイルを作る。Claude Code
--- のようにタイトルを書き換え続けるアプリだと状態ファイルが無限に増え、Ctrl+A→r の
--- 一覧がゴミで埋まる。起動時復元が読むのは workspace 状態(ウィンドウ/タブ/ペイン/
--- cwd を全部含む)だけなので、workspace のみ保存する。
+-- のようにタイトルを書き換え続けるアプリだと状態ファイルが無限に増える。起動時復元が
+-- 読むのは workspace 状態(ウィンドウ/タブ/ペイン/cwd を全部含む)だけなので、workspace
+-- のみ保存する。
 if resurrect then
   -- 起動時復元は state/current_state ファイル(「名前\n種別」)を読んで対象を決める
   -- が、プラグインはこのファイルを自動では書かない (README: "you must include a way
@@ -215,13 +215,12 @@ if resurrect then
 
   -- 間隔について:
   --   WezTerm には「終了時」に相当するイベントが無く、resurrect にも終了時保存は
-  --   無い。つまり state を書くのはこの定期タイマーと Ctrl+A → Shift+S だけで、
-  --   最後の保存から終了までの変更は"まるごと"失われる (実測: タブを 3 枚作って
-  --   5 秒で終了させると state ファイル自体が作られなかった)。60 秒だと「タブを
-  --   足してすぐ閉じる」が丸ごと消え、前回と同じ状態が復元され続ける。
+  --   無い。つまり state を書くのはこの定期タイマーだけで、最後の保存から終了までの
+  --   変更は"まるごと"失われる (実測: タブを 3 枚作って 5 秒で終了させると state
+  --   ファイル自体が作られなかった)。60 秒だと「タブを足してすぐ閉じる」が丸ごと
+  --   消え、前回と同じ状態が復元され続ける。
   --   保存は WSL ドメインではスクロールバックを含まず 1KB 未満と安価なので
   --   (pane_tree.lua の domain == "local" 分岐を参照)、間隔を詰めて取り逃しを減らす。
-  --   確実に残したいときは Ctrl+A → Shift+S で明示保存する。
   --
   -- 注意 (触るな):
   --   periodic_save は call_after で自分を再登録し続けるチェーンで、設定は起動ごとに
@@ -238,106 +237,34 @@ if resurrect then
   })
 end
 
--- ペイン/タブ操作 (tmux 風・Leader = Ctrl+A) --------------------------------
-config.leader = { key = 'a', mods = 'CTRL', timeout_milliseconds = 1000 }
+-- ペイン/タブ操作 (1 ストローク・iTerm 風) ---------------------------------
+-- tmux 風の Leader(Ctrl+A)プレフィックスは廃止。1 ストロークのキーだけ残す。
 config.keys = {
-  -- 分割: Ctrl+A → |(横) / -(縦)。現ペインのドメイン(WSL)と cwd を引き継ぐ。
-  { key = '|', mods = 'LEADER|SHIFT',
-    action = act.SplitHorizontal { domain = 'CurrentPaneDomain' } },
-  { key = '-', mods = 'LEADER',
-    action = act.SplitVertical { domain = 'CurrentPaneDomain' } },
-
-  -- 分割(iTerm 風・1ストローク): Ctrl+D=左右 / Ctrl+Shift+D=上下。
-  -- 注: Ctrl+D を奪うのでシェル終了(EOF)は `exit` か Ctrl+A→x を使う。
+  -- 分割: Ctrl+D=左右 / Ctrl+Shift+D=上下。現ペインのドメイン(WSL)と cwd を継ぐ。
+  -- 注: Ctrl+D を奪うのでシェル終了(EOF)は `exit` を使う。
   { key = 'd', mods = 'CTRL',
     action = act.SplitHorizontal { domain = 'CurrentPaneDomain' } },
   { key = 'D', mods = 'CTRL|SHIFT',
     action = act.SplitVertical { domain = 'CurrentPaneDomain' } },
 
-  -- Vim 風ペイン移動: Ctrl+A → h/j/k/l
-  { key = 'h', mods = 'LEADER', action = act.ActivatePaneDirection 'Left' },
-  { key = 'j', mods = 'LEADER', action = act.ActivatePaneDirection 'Down' },
-  { key = 'k', mods = 'LEADER', action = act.ActivatePaneDirection 'Up' },
-  { key = 'l', mods = 'LEADER', action = act.ActivatePaneDirection 'Right' },
-
-  -- ペイン移動(作成順で前/次・1ストローク): Ctrl+[ / Ctrl+]
+  -- ペイン移動(作成順で前/次): Ctrl+[ / Ctrl+]
   -- 注: Ctrl+[ は端末的には Esc と同じコード。vim 等で Esc がペイン移動に
-  --     化ける場合は mods を 'LEADER' に変えるか別キーへ割り当てる。
+  --     化ける場合は別キーへ割り当てる。
   { key = '[', mods = 'CTRL', action = act.ActivatePaneDirection 'Prev' },
   { key = ']', mods = 'CTRL', action = act.ActivatePaneDirection 'Next' },
 
-  -- ペインサイズ変更: Ctrl+A → Shift+h/j/k/l
-  { key = 'H', mods = 'LEADER|SHIFT', action = act.AdjustPaneSize { 'Left', 5 } },
-  { key = 'J', mods = 'LEADER|SHIFT', action = act.AdjustPaneSize { 'Down', 5 } },
-  { key = 'K', mods = 'LEADER|SHIFT', action = act.AdjustPaneSize { 'Up', 5 } },
-  { key = 'L', mods = 'LEADER|SHIFT', action = act.AdjustPaneSize { 'Right', 5 } },
-
-  -- ペイン: z=最大化トグル / x=閉じる(確認あり)
-  { key = 'z', mods = 'LEADER', action = act.TogglePaneZoomState },
-  { key = 'x', mods = 'LEADER', action = act.CloseCurrentPane { confirm = true } },
-
   -- ペイン削除: Ctrl+W (即削除)。
-  -- 注: シェル/readline の Ctrl+W(直前の単語削除)を奪う。単語削除は
-  --     Ctrl+Backspace かデフォルト維持したい場合はこの行を消す。
+  -- 注: シェル/readline の Ctrl+W(直前の単語削除)を奪う。デフォルト維持したい
+  --     場合はこの行を消す。
   { key = 'w', mods = 'CTRL', action = act.CloseCurrentPane { confirm = false } },
 
-  -- タブ: 新規 = Ctrl+T / Ctrl+A→c、移動 = Ctrl+A→n/p、番号 = Ctrl+A→1..9
-  -- 新規タブは現ペインのドメイン(WSL)を引き継ぐので今開いているパスで開く。
+  -- 新しいタブ: Ctrl+T (現ペインのドメイン=WSL を継ぐので今開いているパスで開く)。
   -- 注: Ctrl+T は readline の文字入れ替え(transpose-chars)を奪う。
   { key = 't', mods = 'CTRL', action = act.SpawnTab 'CurrentPaneDomain' },
-  { key = 'c', mods = 'LEADER', action = act.SpawnTab 'CurrentPaneDomain' },
-  { key = 'n', mods = 'LEADER', action = act.ActivateTabRelative(1) },
-  { key = 'p', mods = 'LEADER', action = act.ActivateTabRelative(-1) },
 
   -- コマンドパレット (メニュー相当の全コマンド検索)
   { key = 'p', mods = 'CTRL|SHIFT', action = act.ActivateCommandPalette },
 }
-
--- タブ番号ジャンプ: Ctrl+A → 1..9
-for i = 1, 9 do
-  table.insert(config.keys, {
-    key = tostring(i), mods = 'LEADER', action = act.ActivateTab(i - 1),
-  })
-end
-
--- セッション保存/復元のキー (resurrect 有効時のみ) --------------------------
-if resurrect then
-  -- 手動保存: Ctrl+A → S (定期保存と同様、起動時復元の目印も書く)
-  table.insert(config.keys, {
-    key = 'S', mods = 'LEADER|SHIFT',
-    action = wezterm.action_callback(function()
-      resurrect.state_manager.save_state(resurrect.workspace_state.get_workspace_state())
-      resurrect.state_manager.write_current_state(
-        wezterm.mux.get_active_workspace(), 'workspace')
-    end),
-  })
-  -- 復元(ファジー選択): Ctrl+A → R
-  table.insert(config.keys, {
-    key = 'r', mods = 'LEADER',
-    action = wezterm.action_callback(function(win, pane)
-      resurrect.fuzzy_loader.fuzzy_load(win, pane, function(id)
-        local kind = string.match(id, '^([^/]+)')
-        id = string.match(id, '([^/]+)$')
-        id = string.match(id, '(.+)%..+$')
-        local opts = {
-          relative = true,
-          restore_text = true,
-          on_pane_restore = resurrect.tab_state.default_on_pane_restore,
-        }
-        if kind == 'workspace' then
-          local state = resurrect.state_manager.load_state(id, 'workspace')
-          resurrect.workspace_state.restore_workspace(state, opts)
-        elseif kind == 'window' then
-          local state = resurrect.state_manager.load_state(id, 'window')
-          resurrect.window_state.restore_window(pane:window(), state, opts)
-        elseif kind == 'tab' then
-          local state = resurrect.state_manager.load_state(id, 'tab')
-          resurrect.tab_state.restore_tab(pane:tab(), state, opts)
-        end
-      end)
-    end),
-  })
-end
 
 -- プラットフォーム別 -------------------------------------------------------
 if triple:find('windows') then

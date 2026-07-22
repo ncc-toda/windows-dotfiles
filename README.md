@@ -1,9 +1,9 @@
 # windows-dotfiles
 
-**WSL (Ubuntu) + Windows ホスト** のターミナル環境一式。Nix flakes +
-[home-manager](https://nix-community.github.io/home-manager/)（standalone）で
-宣言的に管理し、**コマンド1つ**で新しいマシンに再現できる。学生への配布を前提に、
-「マシンを書き換える部分は退避 + 記録して元に戻せる」ように作ってある。
+**WSL (Ubuntu) + Windows ホスト**のターミナル環境一式。Nix flakes +
+[home-manager](https://nix-community.github.io/home-manager/)（standalone）で宣言的に
+管理し、**コマンド1つ**で新しいマシンに再現できる。学生配布を前提に、マシンを書き換える
+部分は退避・記録して元に戻せるようにしてある。
 
 ## 入れる（学生向け）
 
@@ -13,43 +13,39 @@ PowerShell で1行:
 irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.2/install.ps1 | iex
 ```
 
-詳しい手順・つまずき・アンインストールは **[INSTALL.md](INSTALL.md)** を参照。
+手順・つまずき・アンインストールは **[INSTALL.md](INSTALL.md)**、使い方の早見表は
+**[CHEATSHEET.md](CHEATSHEET.md)**。
 
-## 配布はタグ (リリース) から
+## 配布はタグから
 
-学生が叩く URL は `main` ではなく**固定タグ `v1.2`** を指す。`main` は「触った瞬間に
-全学生のマシンで実行される生きた配線」なので、いつ導入しても同じ検証済みスナップ
-ショットを踏むよう、配布はタグに固定してある。`install.ps1` / `uninstall.ps1` 内の
-`$Ref` も同じタグを指すので、入口スクリプトも中身 (dotfiles・state.ps1) も同一 ref に
-揃う。
+学生が叩く URL は `main` ではなく**固定タグ `v1.2`**。`main` は「触った瞬間に全学生の
+マシンで走る生きた配線」なので、配布は検証済みスナップショットのタグに固定する。
+`install.ps1` / `uninstall.ps1` の `$Ref` も同じタグを指し、入口も中身も同一 ref に揃う。
 
 新版を出す手順:
 
-1. `main` で変更 → 実機で確認
-2. 入口の参照を新タグに更新: `install.ps1` / `uninstall.ps1` の `$Ref`、README /
-   INSTALL の URL を `vX.Y` に
-3. コミットして `git tag -a vX.Y -m ... && git push origin vX.Y`
-4. 学生へ新しい URL を周知
+1. `main` で変更 → 実機確認
+2. `install.ps1` / `uninstall.ps1` の `$Ref` と README/INSTALL の URL を `vX.Y` に更新
+3. `git tag -a vX.Y -m ... && git push origin vX.Y`
+4. 学生へ新 URL を周知
 
-`just upgrade` は `main` (最新の開発版) を取り込むので、検証済みの版だけ使いたい間は
-使わない。安定して更新したいときは新しいタグの `install.ps1` を叩き直す。
+`just upgrade` は `main`（開発版）を取り込むので、検証済みだけ使う間は使わない（安定更新は
+新タグの `install.ps1` を叩き直す）。
 
-## 配布の設計（どうやって「壊さない」か）
+## どうやって「壊さない」か
 
 学生のマシンに触る操作は2層に分かれる。
 
-- **WSL/Linux 側**は元から安全。Nix はパッケージを `/nix/store` に隔離し、
-  home-manager は既存の `~/.bashrc` 等を `-b backup` で退避し、`home-manager
-  generations` でロールバックできる。さらに **「授業専用の WSL ディストロを新規
-  作成」** を既定にしており、これを選べば学生の既存環境には一切触れず、不要になれば
-  `wsl --unregister` で跡形なく消える。
-- **Windows ホスト側**は隔離できない（WezTerm / フォント / スタートアップ登録 /
-  winget）。そこで **触った物を全部 `manifest.json` に記録**し、既存ファイルは
-  日時付きフォルダへ退避する。`uninstall.ps1` がその記録を逆再生して原状復帰する。
-  「自分が入れた物か、学生が元から持っていた物か」を記録しているので、人の物を
-  巻き込んで消さない。
+- **WSL/Linux 側**は元から安全。Nix はパッケージを `/nix/store` に隔離、home-manager は
+  既存の `~/.bashrc` 等を `-b backup` で退避し `home-manager generations` でロールバック
+  できる。既定は**授業専用の WSL ディストロを新規作成**で、既存環境に一切触れず、不要に
+  なれば `wsl --unregister` で跡形なく消える。
+- **Windows ホスト側**は隔離できない（WezTerm / フォント / スタートアップ登録 / winget）。
+  触った物を全部 `manifest.json` に記録し、既存ファイルは日時付きフォルダへ退避、
+  `uninstall.ps1` がそれを逆再生して原状復帰する。「自分が入れた物か学生の物か」を記録
+  するので、人の物を巻き込んで消さない。
 
-記録の置き場: `%LOCALAPPDATA%\ncc-dotfiles\`（`manifest.json` と `backup\<日時>\`）。
+記録先: `%LOCALAPPDATA%\ncc-dotfiles\`（`manifest.json` と `backup\<日時>\`）。
 
 ## Layout
 
@@ -62,8 +58,8 @@ flake.nix          inputs (nixpkgs, home-manager)。設定名 = local.nix の us
 home.nix           top-level: username/home は local.nix から、env vars、module imports。
 local.nix          (git 管理外・setup.sh が生成) このマシンの username と git identity。
 modules/
-  shell.nix        bash + starship + fzf + zoxide + direnv + ble.sh + aliases
-  cli.nix          modern CLI tools (eza, bat, ripgrep, fd, jq, ...)
+  shell.nix        bash + starship + fzf + zoxide + direnv + ble.sh
+  cli.nix          modern CLI tools (ripgrep, fd, tree, btop, ...)
   git.nix          git identity (local.nix 参照。最小構成)
   windows.nix      (WSL のみ) just switch 時に Windows 側 bootstrap.ps1 を呼ぶ
 scripts/
@@ -80,75 +76,56 @@ justfile           `just switch` / `just build` / `just update` / `just upgrade`
 
 ## マシン固有設定（local.nix）
 
-ユーザー名と git の名前/メールは人ごとに違うので `local.nix` に分離してある
-（`.gitignore` 済み）。`scripts/setup.sh` が `local.nix.example` を雛形に生成する。
-後から変えるときは `local.nix` を直接編集して `just switch`。
+ユーザー名と git の名前/メールは人ごとに違うので `local.nix`（`.gitignore` 済み）に分離。
+`setup.sh` が `local.nix.example` を雛形に生成する。後から変えるなら直接編集して
+`just switch`。
 
-flake の参照は `path:` 指定（justfile / setup.sh とも）。`path:` は対象を git
-リポジトリとして扱わず中の全ファイルをそのまま読むので、**追跡外の `local.nix` も
-そのまま評価対象になる**（`git add -f` のような小細工は不要）。学生の `~/dotfiles`
-は tarball 展開の非 git ディレクトリ、開発者のは git リポジトリだが、`path:` なら
-どちらでも同じに動く。逆に `.#…`（path: 無し）で評価すると git リポジトリでは
-追跡外の `local.nix` が見えず失敗する。
-
-学生の取得は **git clone せず tarball を curl で展開**する。よって WSL 側に git は
-不要（`curl` / `xz` / `tar` のみ。これらは Nix 導入にも要る）。dotfiles 自体の更新は
-`just upgrade`（tarball 取り直し）。`just update` は nix inputs の更新。
+flake の参照は全て `path:` 指定。`path:` は対象を git 扱いせず中の全ファイルを読むので、
+**追跡外の `local.nix` もそのまま評価される**（`.#…` だと git リポジトリで追跡外ファイルが
+見えず失敗する）。学生の `~/dotfiles` は tarball 展開の非 git ディレクトリなので、取得は
+**git clone せず curl で展開**する（WSL 側に git 不要、`curl`/`xz`/`tar` のみ）。dotfiles の
+更新は `just upgrade`（tarball 取り直し）、nix inputs の更新は `just update`。
 
 ## 開発・保守
 
 ```sh
-just                # = just switch。設定を適用 (初回は既存 dotfiles を退避)
-just build          # 評価/ビルドだけ (適用しない)。CI 的な確認に。
-just update         # nixpkgs + home-manager を最新へ、その後 switch
-just generations    # 世代一覧 / ロールバック
-just --list         # 全レシピ
+just             # = just switch。適用 (初回は既存 dotfiles を退避)
+just build       # 評価/ビルドだけ (適用しない)
+just update      # nixpkgs + home-manager を最新化して switch
+just generations # 世代一覧 / ロールバック
+just --list      # 全レシピ
 ```
 
-設定名はハードコードせず `id -un`（実ユーザー名）で解決するので、誰の環境でも
-同じレシピが動く。
+設定名は `id -un`（実ユーザー名）で解決するので、誰の環境でも同じレシピが動く。
 
 ## 環境差異への対応（設計メモ）
 
-配布先ごとの差を吸収するために入れてある工夫:
-
-- **Caps Lock → F13 リマップの有無**: `caps-toggle.ahk` が起動時に Scancode Map を
-  読んで、F13 が来るマシンと CapsLock が来るマシンのどちらかに動的にバインドする。
-  片方に決め打ちすると、もう片方で「2度押ししても無反応」になるのを防ぐ。
-- **IME の種類**: `ime-shift.ahk` は `WM_IME_CONTROL` + `IMC_SETOPENSTATUS` を IMM32
-  に直接送る。キー送出ではないので Google 日本語入力 / MS-IME / ATOK 共通で効き、
-  IME が1つも無い英語環境では無害に何もしない。
-- **AutoHotkey v1 しか無い**: v1/v2 は併存できる。bootstrap は v2 だけを探して使い、
-  学生の v1 を取り上げない。
-- **開発者モードが無い / WSL の UNC パス**: symlink が張れない環境では自動でコピー
-  配置にフォールバックする。
-- **Nix が既に入っている**: `setup.sh` は既存の Nix を壊さず再利用する。
-- **既存 `.backup` の衝突**: `setup.sh` は home-manager が失敗する前に古い `*.backup`
-  を日時付きフォルダへ退避する。
-- **素の Ubuntu に curl が無い**: `setup.sh` が Nix より前に apt で `curl`/`xz`/`tar`
-  だけ入れる（git は使わない）。
-- **学校ネットワークが GitHub を塞ぐ**: フォント取得等は失敗しても警告のみでシェル
-  自体は動く。取得は Windows 側で済ませ、WSL 側にツールが無くても進む設計。
+- **Caps Lock → F13 リマップの有無**: `caps-toggle.ahk` が起動時に Scancode Map を読み、
+  F13 が来るマシンと CapsLock が来るマシンのどちらかに動的にバインドする。
+- **IME の種類**: `ime-shift.ahk` は `IMC_SETOPENSTATUS` を IMM32 に直接送るので Google
+  日本語入力 / MS-IME / ATOK 共通で効き、IME 無しの環境では無害。
+- **AutoHotkey v1 しか無い**: v2 だけを探して使い、学生の v1 は取り上げない。
+- **symlink 不可（開発者モード無し / UNC パス）**: 自動でコピー配置にフォールバック。
+- **Nix が既に入っている**: 壊さず再利用する。
+- **既存 `*.backup` の衝突**: home-manager が失敗する前に日時付きフォルダへ退避。
+- **素の Ubuntu に curl が無い**: Nix より前に apt で `curl`/`xz`/`tar` だけ入れる。
+- **学校ネットが GitHub を塞ぐ**: フォント取得等は失敗しても警告のみでシェルは動く。
 - **PowerShell 5.1 + 日本語**: 配布 `.ps1` は UTF-8 **BOM 付き**（`.gitattributes` で
-  `-text` にして保護）。BOM が無いと 5.1 がコメントを cp932 と誤読して構文が壊れる。
+  `-text`）。BOM が無いと 5.1 がコメントを cp932 と誤読して構文が壊れる。
 
-## 見た目・キー操作の詳細
+## 詳細ドキュメント
 
-使い方・キーマップ・コマンドの**早見表**は [`CHEATSHEET.md`](CHEATSHEET.md)（1 枚で全体
-を見渡せる。実際に配布される機能だけを掲載）。
-
-より詳しくは、Windows ホスト側（WezTerm / テーマ / フォント / ペイン操作 / セッション
-復元）は [`windows/README.md`](windows/README.md) に、元となった Mac 環境の仕様は
-[`terminal-environment.md`](terminal-environment.md) にある。
+- 使い方・キー操作の早見表: [`CHEATSHEET.md`](CHEATSHEET.md)
+- Windows ホスト側（WezTerm / テーマ / フォント / セッション復元）: [`windows/README.md`](windows/README.md)
+- 元となった Mac 環境の仕様: [`terminal-environment.md`](terminal-environment.md)
 
 ## 中身（何が入るか）
 
-- **Shell:** bash + 補完 + `ble.sh`（補完候補 + シンタックスハイライト）+ 近代的な
-  alias（`ls`→`eza`, `cat`→`bat` …）
+- **Shell:** bash + 補完 + `ble.sh`（補完候補 + シンタックスハイライト）
 - **Prompt:** [starship](https://starship.rs/)
 - **Navigation:** [zoxide](https://github.com/ajeetdsouza/zoxide)（`z`/`zi`）+ fzf
 - **Per-project env:** direnv + nix-direnv
-- **CLI:** eza, bat, ripgrep, fd, jq, yq, dust, duf, btop, …
+- **CLI:** ripgrep, fd, tree, btop, htop, …
 - **Git:** 最小構成 (身元は任意 + 安全側の既定のみ) + [lazygit](https://github.com/jesseduffield/lazygit)
 - **Files:** [yazi](https://github.com/sxyazi/yazi)（`y` で起動、終了時のディレクトリへ cd）
 - **cd 後に自動 ls**（項目が多い時は省略）
