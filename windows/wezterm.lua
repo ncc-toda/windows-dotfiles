@@ -349,9 +349,38 @@ if triple:find('windows') then
     dom.default_cwd = '~' -- cwd 不明な最初の起動時のみホームから開く
   end
   config.wsl_domains = wsl
-  if wsl[1] then
-    config.default_domain = wsl[1].name
-  else
+
+  -- 既定で開くディストロを決める。install.ps1 が %USERPROFILE%\.ncc-wsl-distro に
+  -- 「home-manager (z / starship / OSC 7) を入れたディストロ名」を書く。これを読んで
+  -- そのディストロを既定にすることで、学生の "WSL の既定ディストロ" を変えなくても
+  -- WezTerm は必ず授業用ディストロで開ける。もしこれを別ディストロで開くと、z も
+  -- starship も効かず、ペインも ~ で開いて「全部壊れている」ように見える。
+  -- マーカーが無い (Mac / 手動導入 / 旧版) 場合は、従来どおり列挙先頭 (= WSL の既定
+  -- ディストロ) にフォールバックする。
+  local function marker_distro()
+    local home = os.getenv 'USERPROFILE'
+    if not home then return nil end
+    local f = io.open(home .. '\\.ncc-wsl-distro', 'r')
+    if not f then return nil end
+    local s = (f:read '*l') or ''
+    f:close()
+    -- UTF-8 BOM と前後空白を除去してから使う。
+    s = s:gsub('^\239\187\191', ''):gsub('^%s+', ''):gsub('%s+$', '')
+    return s ~= '' and s or nil
+  end
+
+  local function domain_named(distro)
+    if not distro then return nil end
+    for _, dom in ipairs(wsl) do
+      if dom.name == ('WSL:' .. distro) or dom.distribution == distro then
+        return dom.name
+      end
+    end
+    return nil
+  end
+
+  config.default_domain = domain_named(marker_distro()) or (wsl[1] and wsl[1].name)
+  if not config.default_domain then
     -- WSL ディストロが見つからない場合の保険。
     config.default_prog = { 'wsl.exe', '--cd', '~' }
   end

@@ -15,7 +15,7 @@
         # 展開済みの場合
         .\uninstall.ps1
         # ネットから直接
-        irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.0/uninstall.ps1 | iex
+        irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.1/uninstall.ps1 | iex
 #>
 
 # irm|iex は param() を扱えない (install.ps1 と同じ理由)。引数は環境変数で受ける。
@@ -31,7 +31,7 @@ $Yes        = [bool]$env:NCC_YES
 $ErrorActionPreference = 'Stop'
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force -ErrorAction SilentlyContinue
 # 配布タグ (install.ps1 と揃える)。ネットから state.ps1 を拾う際の ref。
-$Ref = 'v1.0'
+$Ref = 'v1.1'
 
 function Say($m)  { Write-Host "==> $m" -ForegroundColor Cyan }
 function Ok($m)   { Write-Host "    OK: $m" -ForegroundColor Green }
@@ -168,6 +168,22 @@ if ($wslEntry -and -not $KeepDistro) {
             Invoke-Wsl -d $e.distro -u root -- bash -c `
                 "test -f '$($e.backup)' && mv '$($e.backup)' /etc/wsl.conf || rm -f /etc/wsl.conf"
         }
+    }
+}
+
+# install.ps1 が授業用に切り替えた「既定の WSL ディストロ」を元に戻す。元ディストロが
+# まだ残っている時だけ (授業専用ディストロを unregister した後は Windows が既定を
+# 自動で選び直すが、記録があるなら学生が元々使っていた既定へ明示的に戻す)。
+$defEntry = @($entries | Where-Object { $_.type -eq 'wsl-default' }) | Select-Object -First 1
+if ($defEntry -and $defEntry.previous) {
+    $present = @(Invoke-WslCli -l -q | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    if ($present -contains $defEntry.previous) {
+        Say "既定の WSL ディストロを元の '$($defEntry.previous)' に戻す"
+        Invoke-WslCli --set-default $defEntry.previous | Out-Null
+        if ($LASTEXITCODE -eq 0) { Ok "既定ディストロを戻しました" }
+        else { Warn "既定ディストロの復元に失敗 (手動で: wsl --set-default $($defEntry.previous))" }
+    } else {
+        Warn "元の既定ディストロ '$($defEntry.previous)' が見つからないため復元をスキップ"
     }
 }
 

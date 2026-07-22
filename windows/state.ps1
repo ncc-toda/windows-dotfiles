@@ -15,6 +15,7 @@
 #   startup … スタートアップに置いたショートカット (path)
 #   winget  … winget で導入したパッケージ (id)
 #   wsl     … 作成した WSL ディストロ (distro)
+#   wsl-default … 既定の WSL ディストロを変えた記録 (distro/previous)
 #   shell   … chsh でログインシェルを変えた記録 (distro/user/previous)
 #
 # 冪等性: 同じ物を二度記録しない (type + 識別子で突き合わせる)。よって

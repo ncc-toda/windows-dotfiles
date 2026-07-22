@@ -10,14 +10,14 @@
 PowerShell で1行:
 
 ```powershell
-irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.0/install.ps1 | iex
+irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.1/install.ps1 | iex
 ```
 
 詳しい手順・つまずき・アンインストールは **[INSTALL.md](INSTALL.md)** を参照。
 
 ## 配布はタグ (リリース) から
 
-学生が叩く URL は `main` ではなく**固定タグ `v1.0`** を指す。`main` は「触った瞬間に
+学生が叩く URL は `main` ではなく**固定タグ `v1.1`** を指す。`main` は「触った瞬間に
 全学生のマシンで実行される生きた配線」なので、いつ導入しても同じ検証済みスナップ
 ショットを踏むよう、配布はタグに固定してある。`install.ps1` / `uninstall.ps1` 内の
 `$Ref` も同じタグを指すので、入口スクリプトも中身 (dotfiles・state.ps1) も同一 ref に
