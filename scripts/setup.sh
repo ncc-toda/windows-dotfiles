@@ -204,7 +204,59 @@ HOME_MANAGER_BACKUP_EXT=backup "$out/activate" \
   || die "適用に失敗しました"
 ok "適用しました"
 
-# --- 7. ログインシェル ------------------------------------------------------
+# --- 7. AI エージェント CLI (Claude Code / opencode) -------------------------
+# 学生がこの環境を気に入って「自分のベースにする」と決めたら、ここで入れた
+# Claude Code / opencode を立ち上げ、付属の skill で自分の環境や既定設定を
+# 取り込む――という流れを想定している。だから土台として両方を install 時に入れる。
+#
+# どちらも nix パッケージではなく各ベンダーの公式インストーラで入れる。自己更新
+# 機構を持つので、nix で版を固定するより公式配布に任せた方が素直。最終的な置き場は
+# ~/.local/bin に寄せる (hm-session-vars が PATH へ足すのはここだけ)。ネットワークが
+# 塞がっていても環境全体は動くよう、失敗しても die せず warn で続行する。
+LOCAL_BIN="$HOME/.local/bin"
+mkdir -p "$LOCAL_BIN"
+
+# Claude Code: 公式ネイティブインストーラ。プラットフォーム別バイナリを直接落として
+# ~/.local/bin/claude を作る (展開ツール不要)。command -v はこのシェルの PATH に
+# ~/.local/bin が無いと拾えないので、実体の有無でも冪等判定する。
+if command -v claude >/dev/null 2>&1 || [ -x "$LOCAL_BIN/claude" ]; then
+  ok "Claude Code は導入済み"
+else
+  say "Claude Code を導入 (公式インストーラ)"
+  if curl -fsSL https://claude.ai/install.sh | bash >/dev/null 2>&1; then
+    ok "Claude Code を導入しました (初回は 'claude' でログイン)"
+  else
+    warn "Claude Code の導入に失敗 (ネットワーク?)。後で: curl -fsSL https://claude.ai/install.sh | bash"
+  fi
+fi
+
+# opencode: 公式インストーラは ~/.opencode/bin に入れ、シェル rc へ PATH を追記
+# しようとする。だが当環境の ~/.bashrc 等は nix 管理の読取専用シンボリックリンク
+# なので追記は不発になる。そこで:
+#   (1) INSTALL_DIR (~/.opencode/bin) を先に PATH へ載せて rc 追記を skip させる
+#   (2) 展開に要る unzip/tar を拾えるよう ~/.nix-profile/bin も PATH に載せる
+#       (tar はシステム側にもあるが unzip は nix 側だけ)
+#   (3) 実体を ~/.local/bin に symlink して恒久的に PATH へ載せる
+if command -v opencode >/dev/null 2>&1 || [ -x "$LOCAL_BIN/opencode" ]; then
+  ok "opencode は導入済み"
+elif [ -x "$HOME/.opencode/bin/opencode" ]; then
+  # 実体は ~/.opencode/bin にあるが PATH(~/.local/bin)に載っていないケース
+  # (過去に手動インストールした等)。再取得せず symlink だけ張って復旧する。
+  ln -sf "$HOME/.opencode/bin/opencode" "$LOCAL_BIN/opencode"
+  ok "opencode は導入済み (~/.local/bin に symlink を追加)"
+else
+  say "opencode を導入 (公式インストーラ)"
+  if curl -fsSL https://opencode.ai/install \
+       | PATH="$HOME/.opencode/bin:$HOME/.nix-profile/bin:$PATH" bash >/dev/null 2>&1 \
+     && [ -x "$HOME/.opencode/bin/opencode" ]; then
+    ln -sf "$HOME/.opencode/bin/opencode" "$LOCAL_BIN/opencode"
+    ok "opencode を導入しました (~/.local/bin/opencode に symlink)"
+  else
+    warn "opencode の導入に失敗 (ネットワーク?)。後で: curl -fsSL https://opencode.ai/install | bash"
+  fi
+fi
+
+# --- 8. ログインシェル ------------------------------------------------------
 # この環境は bash 向け (ble.sh / starship / OSC 7 はすべて modules/shell.nix)。
 # Ubuntu の既定は bash なので通常は何もすることがない。zsh 等の人にだけ効く。
 current_shell="$(getent passwd "$USERNAME" | cut -d: -f7)"
@@ -230,5 +282,6 @@ fi
 
 echo
 say "完了。WezTerm を開き直すと新しいシェルになります。"
+echo "    AI エージェント: claude / opencode を導入済み (初回は 'claude' でログイン)"
 echo "    設定の更新: cd ~/dotfiles && just switch"
 echo "    元に戻す:   Windows 側の uninstall.ps1"

@@ -5,6 +5,7 @@
     ./modules/cli.nix
     ./modules/git.nix
     ./modules/windows.nix
+    ./modules/claude.nix
   ];
 
   # ユーザー名/ホームは local.nix から (flake.nix 参照)。マシンごとに違うので

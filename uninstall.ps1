@@ -23,6 +23,7 @@
 #   $env:NCC_KEEP_DISTRO=1  授業専用ディストロを消さずに残す
 #   $env:NCC_KEEP_APPS=1    winget で入れた WezTerm/AHK を消さずに残す
 #   $env:NCC_YES=1          確認プロンプトを飛ばす
+#   $env:NCC_REF            取得元の ref を上書き (既定 'release'。開発版/ブランチ検証用)
 $RemoveNix  = [bool]$env:NCC_REMOVE_NIX
 $KeepDistro = [bool]$env:NCC_KEEP_DISTRO
 $KeepApps   = [bool]$env:NCC_KEEP_APPS
@@ -31,7 +32,8 @@ $Yes        = [bool]$env:NCC_YES
 $ErrorActionPreference = 'Stop'
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force -ErrorAction SilentlyContinue
 # 配布 ref (install.ps1 と揃える)。ネットから state.ps1 を拾う際の ref。
-$Ref = 'release'
+# $env:NCC_REF があれば上書き (既定 'release')。ブランチ/タグ検証をこれ一つで差し込める。
+$Ref = if ($env:NCC_REF) { $env:NCC_REF } else { 'release' }
 
 function Say($m)  { Write-Host "==> $m" -ForegroundColor Cyan }
 function Ok($m)   { Write-Host "    OK: $m" -ForegroundColor Green }

@@ -24,6 +24,7 @@
 # 先頭に置くと構文エラーになる (予期しない属性 'CmdletBinding')。よって引数は
 # param() ではなく環境変数で受ける。通常は対話で使うので、どれも未設定でよい。
 #   $env:NCC_DISTRO    使う/作る WSL ディストロ名を固定 (未設定なら対話選択)
+#   $env:NCC_REF       取得元の ref を上書き (既定 'release'。開発版は 'main'、検証はブランチ名)
 #   $env:NCC_GIT_NAME / $env:NCC_GIT_EMAIL   git 身元 (任意。commit する人だけ。未設定なら設定しない)
 #   $env:NCC_YES = 1   最初の確認プロンプトを飛ばす (教室で一斉に流す場合など)
 #   $env:NCC_KEEP_DEFAULT = 1  WSL の「既定ディストロ」を変えない。既定を別ディストロ
@@ -44,7 +45,8 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force -ErrorAction S
 # dotfiles の tar.gz も、setup.sh に渡す取得先も、すべて同じ ref に揃う。開発版を
 # 試すなら 'main'、過去の版に固定するなら 'vX.Y' タグ。
 # archive/<ref>.(zip|tar.gz) の短縮形はタグ/ブランチ/コミットのいずれでも効く。
-$Ref = 'release'
+# $env:NCC_REF があれば上書き (既定 'release')。開発版/ブランチ検証をこれ一つで差し込める。
+$Ref = if ($env:NCC_REF) { $env:NCC_REF } else { 'release' }
 $ZipUrl     = "https://github.com/ncc-toda/windows-dotfiles/archive/$Ref.zip"
 $TarballUrl = "https://github.com/ncc-toda/windows-dotfiles/archive/$Ref.tar.gz"
 $NewDistroImage = 'Ubuntu-24.04'
