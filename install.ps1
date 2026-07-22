@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     PowerShell で:
-        irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.1/install.ps1 | iex
+        irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.2/install.ps1 | iex
 
     やること:
       1. 何を変更するかを提示して同意を取る
@@ -43,7 +43,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force -ErrorAction S
 # Windows 側スクリプト (state.ps1 / setup.sh) の ZIP も、WSL 側 dotfiles の tar.gz
 # も、setup.sh に渡す取得先も、すべて同じ ref に揃う。開発版を試すなら 'main'。
 # archive/<ref>.(zip|tar.gz) の短縮形はタグ/ブランチ/コミットのいずれでも効く。
-$Ref = 'v1.1'
+$Ref = 'v1.2'
 $ZipUrl     = "https://github.com/ncc-toda/windows-dotfiles/archive/$Ref.zip"
 $TarballUrl = "https://github.com/ncc-toda/windows-dotfiles/archive/$Ref.tar.gz"
 $NewDistroImage = 'Ubuntu-24.04'
