@@ -134,8 +134,11 @@ just --list         # 全レシピ
 
 ## 見た目・キー操作の詳細
 
-Windows ホスト側（WezTerm / テーマ / フォント / ペイン操作 / セッション復元）は
-[`windows/README.md`](windows/README.md) に、元となった Mac 環境の仕様は
+使い方・キーマップ・コマンドの**早見表**は [`CHEATSHEET.md`](CHEATSHEET.md)（1 枚で全体
+を見渡せる。実際に配布される機能だけを掲載）。
+
+より詳しくは、Windows ホスト側（WezTerm / テーマ / フォント / ペイン操作 / セッション
+復元）は [`windows/README.md`](windows/README.md) に、元となった Mac 環境の仕様は
 [`terminal-environment.md`](terminal-environment.md) にある。
 
 ## 中身（何が入るか）
