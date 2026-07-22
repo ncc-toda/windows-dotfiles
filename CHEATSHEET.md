@@ -11,11 +11,11 @@ WSL (Ubuntu) + Windows + WezTerm 環境の**使い方・キーマップ・コマ
 
 | やりたいこと | コマンド（PowerShell / WSL） |
 |---|---|
-| **入れる**（学生） | `irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.1/install.ps1 \| iex` |
+| **入れる**（学生） | `irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.2/install.ps1 \| iex` |
 | **dotfiles の中身を更新** | `just upgrade`（最新版 tarball を取り直して再適用） |
-| **消す**（原状復帰） | `irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.1/uninstall.ps1 \| iex` |
+| **消す**（原状復帰） | `irm https://raw.githubusercontent.com/ncc-toda/windows-dotfiles/v1.2/uninstall.ps1 \| iex` |
 
-配布は固定タグ **`v1.1`** から。`main` は開発版なので学生 URL には使わない。
+配布は固定タグ **`v1.2`** から。`main` は開発版なので学生 URL には使わない。
 
 ---
 
