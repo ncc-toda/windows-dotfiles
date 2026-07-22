@@ -24,7 +24,7 @@
 # 先頭に置くと構文エラーになる (予期しない属性 'CmdletBinding')。よって引数は
 # param() ではなく環境変数で受ける。通常は対話で使うので、どれも未設定でよい。
 #   $env:NCC_DISTRO    使う/作る WSL ディストロ名を固定 (未設定なら対話選択)
-#   $env:NCC_GIT_NAME / $env:NCC_GIT_EMAIL   git 身元 (未設定なら対話。任意)
+#   $env:NCC_GIT_NAME / $env:NCC_GIT_EMAIL   git 身元 (任意。commit する人だけ。未設定なら設定しない)
 #   $env:NCC_YES = 1   最初の確認プロンプトを飛ばす (教室で一斉に流す場合など)
 #   $env:NCC_KEEP_DEFAULT = 1  WSL の「既定ディストロ」を変えない。既定を別ディストロ
 #                              にしている人向け。WezTerm はマーカーファイル経由で授業用

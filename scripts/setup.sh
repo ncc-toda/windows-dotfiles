@@ -131,9 +131,11 @@ ok "dotfiles: $REPO_DIR"
 # (username=tetsuo) が紛れ込んでいた場合に、学生環境で username 不一致のまま
 # activation が最後に落ちる。
 #
-# git の名前/メールは任意。commit する時だけ要る値なので、入力は Enter でスキップ
-# できる。決め方は 引数 > 既存 local.nix > 対話入力(スキップ可)。
-# 行頭アンカーで拾う (^.*name だと username 行を誤って掴む)。
+# git の名前/メールは任意。commit する人だけが使う値なので、対話では聞かない。
+# 学生は git を触らない前提で、身元が無くても環境は動く (git.nix は両方揃った
+# ときだけ user.* を書く)。設定したい人は --git-name/--git-email か
+# NCC_GIT_NAME/EMAIL で渡すか、後から ~/dotfiles/local.nix に追記して just switch。
+# 決め方は 引数 > 既存 local.nix。行頭アンカーで拾う (^.*name だと username 行を誤って掴む)。
 if [ -z "$GIT_NAME" ] && [ -f "$REPO_DIR/local.nix" ]; then
   GIT_NAME="$(sed -n 's/^[[:space:]]*name *= *"\(.*\)".*/\1/p' "$REPO_DIR/local.nix" | head -1)"
 fi
@@ -142,12 +144,6 @@ if [ -z "$GIT_EMAIL" ] && [ -f "$REPO_DIR/local.nix" ]; then
 fi
 # 先生の既定値が居残っていたら、学生には使わせない。
 if [ "$GIT_EMAIL" = "oda.tetsuo@nsg.gr.jp" ]; then GIT_NAME=""; GIT_EMAIL=""; fi
-
-if [ -z "$GIT_NAME" ] || [ -z "$GIT_EMAIL" ]; then
-  say "git の身元 (任意。commit する人だけ。不要なら Enter でスキップ)"
-  [ -z "$GIT_NAME" ]  && { printf '    名前 (例: Taro Yamada, 無ければ Enter): ';     read -r GIT_NAME; }
-  [ -z "$GIT_EMAIL" ] && { printf '    メール (例: taro@example.com, 無ければ Enter): '; read -r GIT_EMAIL; }
-fi
 
 # git ブロックは両方揃ったときだけ書く (git.nix 側も片方だけなら無視する)。
 if [ -n "$GIT_NAME" ] && [ -n "$GIT_EMAIL" ]; then
