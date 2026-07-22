@@ -12,23 +12,6 @@
     historyFileSize = 100000;
     historySize = 50000;
 
-    shellAliases = {
-      # Modern CLI replacements.
-      ls = "eza --group-directories-first";
-      ll = "eza -l --git --group-directories-first";
-      la = "eza -la --git --group-directories-first";
-      lt = "eza --tree --level=2";
-      cat = "bat --paging=never";
-      grep = "grep --color=auto";
-
-      # Quality-of-life.
-      ".." = "cd ..";
-      "..." = "cd ../..";
-      gs = "git status";
-      gd = "git diff";
-      gl = "git log --oneline --graph --decorate -20";
-    };
-
     # ble.sh gives bash autosuggestions + syntax highlighting (the bash answer
     # to zsh-autosuggestions / zsh-syntax-highlighting). It must be sourced
     # first and attached last, so it brackets the rest of the init.
@@ -69,7 +52,7 @@
         }
         PROMPT_COMMAND="__osc7_cwd; __wezterm_repo''${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
 
-        # cd 後に自動で一覧表示 (zsh の chpwd + eza フック相当)。
+        # cd 後に自動で一覧表示 (zsh の chpwd フック相当)。
         # 項目が多いディレクトリでは一覧を省略して圧迫を防ぐ。
         __auto_ls() {
           local n
@@ -77,7 +60,7 @@
           if (( n > 100 )); then
             printf '  %s  (%d items — listing skipped)\n' "$PWD" "$n"
           else
-            eza --group-directories-first --icons=auto --git
+            command ls --color=auto --group-directories-first
           fi
         }
         if [[ ''${BLE_VERSION-} ]]; then
